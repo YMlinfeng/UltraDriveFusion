@@ -12,7 +12,6 @@ sudo chown -R tiger:tiger /mnt/bn/occupancy3d/workspace/mzj/MagicDriveDiT/
 # cd /mnt/bn/occupancy3d/workspace/mzj/lib/apex/ || exit 1
 # pip install -v --disable-pip-version-check --no-build-isolation --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
 
-
 # pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation \
 #   --config-settings="--build-option=--cpp_ext" \
 #   --config-settings="--build-option=--cuda_ext" ./
