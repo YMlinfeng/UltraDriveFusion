@@ -35,8 +35,8 @@ img_collate_param_train = dict(
 )
 dataset_cfg_overrides = (
     # key, value
-    ("dataset.data.train.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
-    ("dataset.data.val.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
+    ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
+    ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
     ("+dataset.data.val.start_on_firstframe", True),  # ensure 150 videos
     ("+dataset.data.val.micro_frame_size", 8), 
 )
@@ -148,9 +148,16 @@ model = dict(
 )
 # partial_load="outputs/temp/CogVAE/MagicDriveSTDiT3-XL-2_1x224x400_stdit3_CogVAE_noTemp_xCE_wSST_bs4_lr8e-5_20240822-1911/epoch363-global_step80000"
 
+# vae = dict(
+#     type="VideoAutoencoderKLCogVideoX",
+#     from_pretrained="./pretrained/CogVideoX-2b",
+#     subfolder="vae",
+#     micro_frame_size=micro_frame_size,
+#     micro_batch_size=1,
+# )
 vae = dict(
-    type="VideoAutoencoderKLCogVideoX",
-    from_pretrained="./pretrained/CogVideoX-2b",
+    type="VideoAutoencoderKLHunyuan",
+    from_pretrained="./pretrained/Hunyuan",
     subfolder="vae",
     micro_frame_size=micro_frame_size,
     micro_batch_size=1,

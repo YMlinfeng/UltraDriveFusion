@@ -1148,7 +1148,7 @@ class AutoencoderKLCogVideoX(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         batch_size, num_channels, num_frames, height, width = z.shape
 
         if self.use_tiling and (width > self.tile_latent_min_width or height > self.tile_latent_min_height):
-            return self.tiled_decode(z, return_dict=return_dict)
+            return self.tiled_decode(z, return_dict=return_dict) #!
 
         frame_batch_size = self.num_latent_frames_batch_size
         dec = []
@@ -1156,10 +1156,10 @@ class AutoencoderKLCogVideoX(ModelMixin, ConfigMixin, FromOriginalModelMixin):
             remaining_frames = num_frames % frame_batch_size
             start_frame = frame_batch_size * i + (0 if i == 0 else remaining_frames)
             end_frame = frame_batch_size * (i + 1) + remaining_frames
-            z_intermediate = z[:, :, start_frame:end_frame]
+            z_intermediate = z[:, :, start_frame:end_frame] #!
             if self.post_quant_conv is not None:
                 z_intermediate = self.post_quant_conv(z_intermediate)
-            z_intermediate = self.decoder(z_intermediate)
+            z_intermediate = self.decoder(z_intermediate) #!
             dec.append(z_intermediate)
 
         self._clear_fake_context_parallel_cache()
@@ -1453,3 +1453,4 @@ class VideoAutoencoderKLCogVideoX(nn.Module):
     @property
     def dtype(self):
         return next(self.parameters()).dtype
+

@@ -27,10 +27,10 @@ def build_module(module, builder, **kwargs):
     else:
         raise TypeError(f"Only support dict and nn.Module, but got {type(module)}.")
 
-
+# @MODELS.register_module()
 MODELS = Registry(
-    "model",
-    locations=["magicdrivedit.models"],
+    "model", # 创建一个名为 "model" 的注册器 MODELS
+    locations=["magicdrivedit.models"], # 表示可以在这个 Python 包路径下自动查找所有可以注册的模块（比如模型类）
 )
 
 SCHEDULERS = Registry(

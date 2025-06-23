@@ -17,7 +17,6 @@ except Exception as e:
 import torch
 USE_NPU = False
 import magicdrivedit.utils.module_contrib
-
 import torch.distributed as dist
 from einops import rearrange, repeat
 import colossalai
@@ -27,7 +26,6 @@ from colossalai.nn.optimizer import HybridAdam
 from colossalai.utils import get_current_device, set_seed
 from tqdm import tqdm
 from mmcv.parallel import DataContainer
-
 import logging
 import warnings
 from shapely.errors import ShapelyDeprecationWarning
@@ -36,7 +34,6 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 logging.getLogger('shapely.geos').setLevel(logging.WARNING)
 logging.getLogger('numba.core').setLevel(logging.INFO)
 logging.getLogger('magicdrivedit.models.vae.vae_cogvideox').setLevel(logging.WARNING)
-
 from magicdrivedit.acceleration.checkpoint import set_grad_checkpoint
 from magicdrivedit.acceleration.parallel_states import get_data_parallel_group, get_sequence_parallel_group
 from magicdrivedit.datasets.dataloader import prepare_dataloader

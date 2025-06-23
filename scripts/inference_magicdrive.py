@@ -248,7 +248,7 @@ def main():
     # if the program gets stuck, try set it to false
     os.environ['TOKENIZERS_PARALLELISM'] = "true"
     text_encoder = build_module(cfg.text_encoder, MODELS, device=device)
-    vae = build_module(cfg.vae, MODELS).to(device, dtype).eval()
+    vae = build_module(cfg.vae, MODELS).to(device, dtype).eval() # 是根据配置 cfg.vae 和注册器 MODELS 构造一个模型对象
     if cfg.vae_tiling:
         vae.module.enable_tiling(**TILING_PARAM[str(cfg.vae_tiling)])
         logger.info(f"VAE Tiling is enabled with {TILING_PARAM[str(cfg.vae_tiling)]}")

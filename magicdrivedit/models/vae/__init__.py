@@ -1,1 +1,2 @@
 from .vae_cogvideox import VideoAutoencoderKLCogVideoX
+from .vae_hunyuan import VideoAutoencoderKLHunyuan

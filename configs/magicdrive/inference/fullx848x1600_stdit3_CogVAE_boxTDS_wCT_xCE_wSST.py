@@ -23,6 +23,7 @@ num_frames = 'full'
 data_cfg_name = "Nuscenes_400_map_cache_box_t_with_n2t_12Hz_848x1600"
 bbox_mode = 'all-xyz'
 img_collate_param_train = dict(
+    
     # template added by code.
     frame_emb = "next2top",
     bbox_mode = bbox_mode,
@@ -151,13 +152,23 @@ model = dict(
 )
 # partial_load="outputs/temp/CogVAE/MagicDriveSTDiT3-XL-2_1x224x400_stdit3_CogVAE_noTemp_xCE_wSST_bs4_lr8e-5_20240822-1911/epoch363-global_step80000"
 
+# vae = dict(
+#     # type="VideoAutoencoderKLCogVideoX",
+#     type="VideoAutoencoderKLHunyuan",
+#     from_pretrained="./pretrained/CogVideoX-2b",
+#     subfolder="vae",
+#     micro_frame_size=micro_frame_size,
+#     micro_batch_size=1,
+# )
+
 vae = dict(
-    type="VideoAutoencoderKLCogVideoX",
-    from_pretrained="./pretrained/CogVideoX-2b",
+    type="VideoAutoencoderKLHunyuan",
+    from_pretrained="./pretrained/Hunyuan",
     subfolder="vae",
     micro_frame_size=micro_frame_size,
     micro_batch_size=1,
 )
+
 text_encoder = dict(
     type="t5",
     from_pretrained= "./pretrained/t5-v1_1-xxl",

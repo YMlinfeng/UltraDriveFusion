@@ -35,9 +35,9 @@ img_collate_param_train = dict(
 )
 dataset_cfg_overrides = (
     # key, value
-    ("dataset.dataset_process_root", "./data/nuscenes_mmdet3d-12Hz/"),
-    ("dataset.data.train.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
-    ("dataset.data.val.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
+    ("dataset.dataset_process_root", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/"),
+    ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
+    ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
     ("+dataset.data.val.start_on_firstframe", True),  # ensure 150 videos
     ("+dataset.data.val.micro_frame_size", 8), 
 )
