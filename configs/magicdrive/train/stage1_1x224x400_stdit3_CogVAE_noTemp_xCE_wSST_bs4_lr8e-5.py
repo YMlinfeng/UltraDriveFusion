@@ -121,13 +121,22 @@ model = dict(
     # from_pretrained="./pretrained/hpcai-tech/OpenSora-STDiT-v3",
     # force_huggingface=True,  # if `from_pretrained` is a repo from hf, use this.
 )
+# vae = dict(
+#     type="VideoAutoencoderKLCogVideoX",
+#     from_pretrained="./pretrained/CogVideoX-2b",
+#     subfolder="vae",
+#     micro_frame_size=micro_frame_size,
+#     micro_batch_size=1,
+# )
+
 vae = dict(
-    type="VideoAutoencoderKLCogVideoX",
-    from_pretrained="./pretrained/CogVideoX-2b",
+    type="VideoAutoencoderKLHunyuan",
+    from_pretrained="./pretrained/Hunyuan",
     subfolder="vae",
     micro_frame_size=micro_frame_size,
     micro_batch_size=1,
 )
+
 text_encoder = dict(
     type="t5",
     from_pretrained= "./pretrained/t5-v1_1-xxl",

@@ -108,7 +108,7 @@ class CogVideoXCausalConv3d(nn.Module):
 
         self.conv_cache = None
 
-    def fake_context_parallel_forward(self, inputs: torch.Tensor) -> torch.Tensor:
+    def fake_context_parallel_forward(self, inputs: torch.Tensor) -> torch.Tensor: # 拼接上下文帧，使得每段输入有上一段的时间信息
         kernel_size = self.time_kernel_size
         if kernel_size > 1:
             cached_inputs = (
@@ -117,7 +117,7 @@ class CogVideoXCausalConv3d(nn.Module):
             inputs = torch.cat(cached_inputs + [inputs], dim=2)
         return inputs
 
-    def _clear_fake_context_parallel_cache(self):
+    def _clear_fake_context_parallel_cache(self): # 清除缓存，防止帧串扰
         del self.conv_cache
         self.conv_cache = None
 

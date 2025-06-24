@@ -135,7 +135,7 @@ class NuScenesVariableDataset(NuScenesTDataset):
             list[dict]: List of annotations sorted by timestamps.
         """
         data = mmcv.load(ann_file)
-        data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
+        data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"])) #!
         data_infos = data_infos[:: self.load_interval]
         self.metadata = data["metadata"]
         self.version = self.metadata["version"]
@@ -185,9 +185,10 @@ class NuScenesVariableDataset(NuScenesTDataset):
 
     def get_data_info(self, idx, num_frames, interval):
         """We should sample from clip_infos
+        clip 是一个帧索引数组，如 [1000, 1001, 1002, 1003]，天然确保了帧的连续性
         """
-        clip = self.clip_infos[num_frames][idx][0::interval]
-        frames = self.load_clip(clip)
+        clip = self.clip_infos[num_frames][idx][0::interval] # self.clip_infos[index] 是一个长度为 video_length 的帧索引列表
+        frames = self.load_clip(clip) # 按顺序取出这些帧
         return frames
 
     def prepare_train_data(self, index):

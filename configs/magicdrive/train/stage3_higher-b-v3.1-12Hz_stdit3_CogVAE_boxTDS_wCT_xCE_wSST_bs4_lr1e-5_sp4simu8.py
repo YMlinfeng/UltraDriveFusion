@@ -20,9 +20,9 @@ video_lengths_fps = {  # all lengths are 8n or 8n+1
         [1, 1, 1, 1, 1],
     ],
     "848x1600": [
-        [1, 9, 17, 33,],
-        [[120,], [12,], [12], [12],],
-        [1, 1, 1, 1],
+        [1, 9, 17, 33],              # video_length
+        [[120], [12], [12], [12]],  # fps
+        [1, 1, 1, 1],                # repeat_times
     ]
 }
 balance_keywords = ["night", "rain", "none"]
