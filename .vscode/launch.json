@@ -1,0 +1,149 @@
+{
+    // stage 3
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: Train MagicDrive (4 GPU - torchrun)",
+        "type": "python",
+        "request": "launch",
+        "python": "/mnt/bn/occupancy3d/workspace/mzj/env/magic/bin/python3",
+        "program": "/usr/local/lib/python3.9/dist-packages/torch/distributed/launch.py",
+        "args": [
+          "--nnodes=1",
+          "--nproc-per-node=4",
+          "--master-addr=localhost",
+          "--master-port=12346",
+          "--use-env",
+          "scripts/train_magicdrive.py",
+          "configs/magicdrive/train/stage3_higher-b-v3.1-12Hz_stdit3_CogVAE_boxTDS_wCT_xCE_wSST_bs4_lr1e-5_sp4simu8.py",
+          "--cfg-options",
+          "num_workers=8",
+          "prefetch_factor=2"
+        ],
+        "env": {
+          "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+          "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "1.25"
+        },
+        "console": "integratedTerminal",
+        "justMyCode": false, 
+        "subProcess": true  
+      }
+    ]
+  }
+
+
+  // {
+//     // opensoraplan
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Python: Train OpenSoraPlanVAE",
+//             "type": "python",
+//             "request": "launch",
+//             "python": "/usr/bin/python3",
+//             "program": "/usr/local/lib/python3.9/dist-packages/torch/distributed/launch.py",
+//             "args": [
+//                 "--nnodes=1",
+//                 "--nproc-per-node=8",
+//                 "--master-addr=localhost",
+//                 "--master-port=12134",
+//                 "--use-env",
+//                 "opensora/train/train_causalvae.py",
+//                 "--exp_name", "debug",
+//                 "--video_path", "/mnt/bn/occupancy3d/workspace/mzj/data/opensoraplan/video33",
+//                 "--eval_video_path", "/mnt/bn/occupancy3d/workspace/mzj/data/opensoraplan/video33/1",
+//                 "--model_name", "WFVAE",
+//                 "--model_config", "scripts/causalvae/wfvae_8dim.json",
+//                 "--resolution", "(512,512)",
+//                 "--num_frames", "9",
+//                 "--batch_size", "2",
+//                 "--lr", "0.00001",
+//                 "--epochs", "1000",
+//                 "--disc_start", "0",
+//                 "--save_ckpt_step", "20",
+//                 "--eval_steps", "20",
+//                 "--eval_batch_size", "1",
+//                 "--eval_num_frames", "9",
+//                 "--eval_sample_rate", "1",
+//                 "--eval_subset_size", "2000",
+//                 "--eval_lpips",
+//                 "--ema",
+//                 "--ema_decay", "0.999",
+//                 "--perceptual_weight", "1.0",
+//                 "--loss_type", "l1",
+//                 "--sample_rate", "1",
+//                 "--disc_cls", "opensora.models.causalvideovae.model.losses.LPIPSWithDiscriminator3D",
+//                 "--wavelet_loss",
+//                 "--wavelet_weight", "0.1",
+//                 "--eval_num_video_log", "4",
+//                 "--pretrained_model_name_or_path", "/mnt/bn/occupancy3d/workspace/mzj/Open-Sora-Plan/results/origin",
+//                 "--resume_from_checkpoint", "/mnt/bn/occupancy3d/workspace/mzj/Open-Sora-Plan/results/t523-32node-20250523_223419-lr1.00e-05-bs2-rs512-sr1-fr9/checkpoint-192000.ckpt"
+//             ],
+//             "env": {
+//                 "WANDB_PROJECT": "MZJVAE-DEBUG",
+//                 // "WANDB_ENTITY": "xiao102851",
+//                 // "WANDB_API_KEY": "f4416857501984f14835ded01a1fe0fbb6e7bcb7",
+//                 "CUDA_VISIBLE_DEVICES": "0,1,2,3,4,5,6,7",
+//                 "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "1.25"
+//             },
+//             "console": "integratedTerminal"
+//         }
+//     ]
+// }
+
+
+// {
+//     // 第一阶段训练
+//     "version": "0.2.0",
+//     "configurations": [
+//         {
+//             "name": "Python: Train MagicDrive (Single GPU)",
+//             "type": "python",
+//             "request": "launch",
+//             "program": "scripts/train_magicdrive.py",
+//             "args": [
+//                 "configs/magicdrive/train/stage1_1x224x400_stdit3_CogVAE_noTemp_xCE_wSST_bs4_lr8e-5.py",
+//                 "--cfg-options", 
+//                 "num_workers=8", 
+//                 "prefetch_factor=2"
+//             ],
+//             "env": {
+//                 "CUDA_VISIBLE_DEVICES": "0",  // 指定单卡
+//                 "RANK": "0",                  // 必须：当前进程的全局排名（单卡为0）
+//                 "WORLD_SIZE": "1",            // 必须：总进程数（单卡为1）
+//                 "MASTER_ADDR": "localhost",   // 必须：主节点地址
+//                 "MASTER_PORT": "12346",       // 必须：主节点端口
+//                 "LOCAL_RANK": "0"             // 可选：本地节点上的排名
+//             },
+//             "console": "integratedTerminal",
+//             "justMyCode": false
+//         }
+//     ]
+// }
+
+
+// {
+//   //inference
+//   "version": "0.2.0",
+//   "configurations": [
+//     {
+//       "name": "Debug inference_magicdrive.py",
+//       "type": "python",
+//       "request": "launch",
+//       "program": "${workspaceFolder}/scripts/inference_magicdrive.py",
+//       "console": "integratedTerminal",
+//       "justMyCode": false,
+//       "env": {
+//         "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+//       },
+//       "args": [
+//         "${workspaceFolder}/configs/magicdrive/inference/fullx848x1600_stdit3_CogVAE_boxTDS_wCT_xCE_wSST.py",
+//         "--cfg-options",
+//         "model.from_pretrained=./ckpts/MagicDriveDiT-stage3-40k-ft/ema.pt",
+//         "num_frames=9",
+//         "scheduler.type=rflow-slice"
+//       ],
+//       "cwd": "${workspaceFolder}"
+//     }
+//   ]
+// }
