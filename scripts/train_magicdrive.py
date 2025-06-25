@@ -185,7 +185,7 @@ def main():
         num_bucket_build_workers=cfg.get("num_bucket_build_workers", 1),
         **dataloader_args,
     )
-    num_steps_per_epoch = len(dataloader)
+    num_steps_per_epoch = len(dataloader) #4 * 7032=28128
 
     # val
     if cfg.get("overfit", None) is not None:

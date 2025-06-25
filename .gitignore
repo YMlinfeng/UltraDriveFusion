@@ -11,3 +11,4 @@ pretrained/
 *.run
 *.deb
 __pycache__*/
+
