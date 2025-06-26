@@ -194,3 +194,7 @@ ema_decay = 0.99
 adam_eps = 1e-15
 weight_decay = 1e-2
 warmup_steps = 3000
+
+# mzj modification
+validation_before_run = True
+verbose_mode = True

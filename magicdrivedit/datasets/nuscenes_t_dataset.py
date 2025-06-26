@@ -1054,7 +1054,7 @@ class NuScenesTDataset(NuScenesDataset):
             ret_dicts.pop("pixel_values")
         return ret_dicts
 
-    def prepare_train_data(self, index):
+    def prepare_train_data(self, index): #!
         """This is called by `__getitem__`
         """
         frames = self.get_data_info(index)

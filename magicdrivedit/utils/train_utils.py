@@ -367,8 +367,9 @@ class MaskGenerator:
         return masks
 
 
-def sp_vae(x, vae_func, sp_group: dist.ProcessGroup):
+def sp_vae(x, vae_func, sp_group: dist.ProcessGroup): # sp_group: 分布式进程组，用于 sequence parallelism
     """use sp_group to scatter vae encode
+    使用 序列并行（Sequence Parallelism） 技术将编码任务分布到多个进程上并行执行 
 
     Args:
         x (torch.Tensor): (B NC) C T ... or B C T ...
@@ -390,7 +391,6 @@ def sp_vae(x, vae_func, sp_group: dist.ProcessGroup):
             f"fallback to the normal one."
         )
         return vae_func(x)
-
     if copy_size > B:
         x_copy_num = math.ceil(copy_size / B)
         x_temp = torch.cat([x for _ in range(x_copy_num)])[:copy_size]
@@ -400,14 +400,17 @@ def sp_vae(x, vae_func, sp_group: dist.ProcessGroup):
     else:
         x_temp = x
 
+    # 切分每个进程的数据
     local_x = x_temp[local_rank * per_rank_bs:(local_rank + 1) * per_rank_bs]
     assert local_x.shape[0] == per_rank_bs
     del x_temp
-    local_latent = vae_func(local_x)
+    #! core code
+    local_latent = vae_func(local_x) # 局部 VAE 编码,vae_func=vae.encode,个进程对自己的数据 local_x 执行 VAE 编码，得到 local_latent=[per_rank_bs, C_latent, T, H', W']
 
+    # 使用 all_gather 聚合所有进程结果
     global_latent = [torch.empty_like(local_latent) for _ in range(group_size)]
     dist.all_gather(global_latent, local_latent, group=sp_group)
     dist.barrier(sp_group)
     del local_latent
-    global_latent = torch.cat(global_latent, dim=0)[:B]
+    global_latent = torch.cat(global_latent, dim=0)[:B] # 拼接所有 latent 并裁剪回原始长度
     return global_latent

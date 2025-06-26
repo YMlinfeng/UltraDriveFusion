@@ -199,3 +199,11 @@ We noticed [hpcaitech/ColossalAI#6091](https://github.com/hpcaitech/ColossalAI/i
 
 Our high-resolution video requires a lot of CPU memory for the dataloader. If you set `num_workers` or `prefetch_factor` too high, it may lead to insufficient memory and cause the program to crash. Please try reducing these parameters. Additionally, during the inference phase, we have set `ignore_ori_imgs` to prevent the dataloader from loading images from the dataset, thereby reducing memory pressure.
 
+
+
+好的，接下来根据这个训练代码为我回答以下几个问题：
+1、训练的时候，输入都是什么？输出是什么？
+2、控制条件都有什么？各种控制条件分别是怎么加进去的，是在压缩前加的，还是压缩之后加入，和latent tensor一起输入到diffusion model，还是怎么做的？
+3、如果我的压缩方式从现在的从（24（NC=6*B=4），C，T，H，W）压到（24，16，1，28，50）变为从（B，），那怎么样修改现在的代码？比如怎么修改控制条件的加入和diffusion model的结构？
+4、代码中的可选遮罩（mask）生成是什么意思？
+5、diffusion一次生成的是几帧？有没有用到roll-out？
