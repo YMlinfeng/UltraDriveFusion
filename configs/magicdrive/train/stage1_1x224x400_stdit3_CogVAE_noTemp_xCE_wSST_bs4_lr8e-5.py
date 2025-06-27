@@ -1,7 +1,8 @@
 # Dataset settings
 num_frames = 1
-data_cfg_name = "Nuscenes_map_cache_box_t_with_n2t"
 bbox_mode = 'all-xyz'
+
+data_cfg_name = "Nuscenes_map_cache_box_t_with_n2t"
 img_collate_param_train = dict(
     # template added by code.
     frame_emb = "next2top",

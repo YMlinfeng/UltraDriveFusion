@@ -1,4 +1,4 @@
-torchrun --nproc-per-node=1 \--master-port 12346 \
+torchrun --nproc-per-node=8 \--master-port 12346 \
     scripts/train_magicdrive.py \
-    configs/magicdrive/train/stage1_1x224x400_stdit3_CogVAE_noTemp_xCE_wSST_bs4_lr8e-5.py \
-    --cfg-options num_workers=8 prefetch_factor=2
+    configs/configs/magicdrive/train/stage2_1-33x224x400-12Hz_stdit3_CogVAE_boxTDS_wCT_xCE_wSST_bs4_lr8e-5.py \
+    --cfg-options num_workers=2 prefetch_factor=2

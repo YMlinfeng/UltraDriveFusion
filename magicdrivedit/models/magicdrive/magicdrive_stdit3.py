@@ -454,9 +454,7 @@ class MagicDriveSTDiT3Config(PretrainedConfig):
 
 
 class MagicDriveSTDiT3(PreTrainedModel):
-    """
-    Diffusion model with a Transformer backbone.
-    """
+
     config_class = MagicDriveSTDiT3Config
 
     def __init__(self, config: MagicDriveSTDiT3Config):
@@ -896,13 +894,16 @@ class MagicDriveSTDiT3(PreTrainedModel):
         # cam_emb = rearrange(cam_emb, "(B T S) ... -> B T S ...", B=B, T=T, S=S)
         return cam_emb
 
-    def encode_cond_sequence(self, bbox, cams, rel_pos, y, mask, drop_cond_mask, drop_frame_mask):  # changed
+    def encode_cond_sequence(self, bbox, cams, rel_pos, y, mask, drop_cond_mask, drop_frame_mask):  
+        '''
+        encode -> repeat -> concatenate
+        '''
         b = len(y)
         NC, T = cams.shape[0] // b, cams.shape[1]
         cond = []
 
         # encode y
-        y, _ = self.encode_text(y, mask, drop_cond_mask)  # b, seq_len, dim
+        y, _ = self.encode_text(y, mask, drop_cond_mask)  # b, seq_len, dim = 2,38,1152
         # return y, None # change me!
         y = repeat(y, "b ... -> (b NC) ...", NC=NC)
         # cond.append(y)
@@ -911,10 +912,10 @@ class MagicDriveSTDiT3(PreTrainedModel):
         if bbox is not None:
             drop_box_mask = torch.logical_and(drop_cond_mask[:, None], drop_frame_mask)  # b, T
             drop_box_mask = repeat(drop_box_mask, "b ... -> (b NC) ...", NC=NC)
-            bbox_emb = self.encode_box(bbox, drop_mask=drop_box_mask)  # B, T, box_len, dim
+            bbox_emb = self.encode_box(bbox, drop_mask=drop_box_mask)  # B, T, box_token_len, dim=hidden_size
             # bbox_emb = bbox_emb.mean(1)  # pooled token
             # zero proj on base token
-            bbox_emb = self.base_token[None, None, None] + bbox_emb
+            bbox_emb = self.base_token[None, None, None] + bbox_emb  # [1, 1, 1, 1152] + ... = [12, 3, 38, 1152]
             cond.append(bbox_emb)
 
         # encode cam, just take from first frame
@@ -926,7 +927,7 @@ class MagicDriveSTDiT3(PreTrainedModel):
         # frame_emb = frame_emb.mean(1)  # pooled token
         # zero proj on base token
         cam_emb = self.base_token[None, None, None] + cam_emb
-        frame_emb = self.base_token[None, None, None] + frame_emb
+        frame_emb = self.base_token[None, None, None] + frame_emb # 编码摄像头参数和 frame_emb（相对位置）分别通过 encode_cam 得到摄像头和帧嵌入，并加上 base_token
 
         cam_emb = repeat(cam_emb, 'B 1 S ... -> B T S ...', T=frame_emb.shape[1])
         y = repeat(y, "B ... -> B T ...", T=frame_emb.shape[1])
@@ -938,7 +939,7 @@ class MagicDriveSTDiT3(PreTrainedModel):
         # cond = torch.cat([y, frame_emb, cam_emb], dim=1)  # B, len, dim
         # return rearrange(cond, '(b NC) ... -> b NC ...', NC=NC)[:, 0], None
         # cond = torch.cat(cond, dim=1)  # B, len, dim
-        cond = torch.cat(cond, dim=2)  # B, T, len, dim
+        cond = torch.cat(cond, dim=2)  # B=12, T=3, len=78, dim=1152 # 将所有条件（文本、bbox、摄像头、frame_emb）拼接在一起，通常输出一个张量形状为 [B, T, L, hidden_size]，这里 L 为各个条件 tokens 之和
         return cond, None
 
     def encode_map(self, maps, NC, h_pad_size, x_shape):
@@ -1005,6 +1006,19 @@ class MagicDriveSTDiT3(PreTrainedModel):
                 **kwargs):
         """
         Forward pass of MagicDrive.
+        假设输入参数说明如下：
+            x：经过 VAE 编码、形状大致为 [B, C×NC, T, H, W]
+            B：batch 大小
+            NC：摄像头数量
+            C：每个摄像头的 latent 通道数
+            T：帧数
+            H, W：空间尺寸（已经下采样）
+            timestep：时间步（用于生成噪声权重），标量或 [B] 张量
+            y：文本描述（未经过编码），后续通过 CaptionEmbedder 编码为 [B, 1, N_token, hidden_size]
+            maps：地图或 BEV 信息，形状 [B, T, ...]
+            bbox、cams、rel_pos：分别是 3D 边界框、相机参数（内外参）和帧间变换，用于条件约束
+            fps、height、width：视频帧率、原始图像高度和宽度
+            另外还有 drop_cond_mask、drop_frame_mask、mv_order_map、t_order_map、mask、x_mask 等辅助条件和 mask 信息
         """
         dtype = self.x_embedder.proj.weight.dtype
         B, real_T = x.size(0), rel_pos.size(1)
@@ -1019,17 +1033,18 @@ class MagicDriveSTDiT3(PreTrainedModel):
             NC = len(mv_order_map)
         x = x.to(dtype)
         # HACK: to use scheduler, we never assume NC with C
+        # todo
         x = rearrange(x, "B (C NC) T ... -> (B NC) C T ...", NC=NC)
         timestep = timestep.to(dtype)
         y = y.to(dtype)
 
-        # === get pos embed ===
+        # === 1.1 分patch ===
         _, _, Tx, Hx, Wx = x.size()
-        x_in_shape = x.shape  # before pad
-        T, H, W = self.get_dynamic_size(x)
+        x_in_shape = x.shape  # before pad 原始输入 x 尺寸，用于后续 unpatchify 调整
+        T, H, W = self.get_dynamic_size(x) # 根据输入 x 得到下采样后的 T、H、W 值，然后通过 pos_embed 计算位置嵌入，再与 x 的空间嵌入结合
         S = H * W
 
-        # adjust for sequence parallelism
+        # adjust for sequence parallelism 这一大坨都不用改
         # we need to ensure H * W is divisible by sequence parallel size
         # for simplicity, we can adjust the height to make it divisible
         h_pad_size = 0
@@ -1090,23 +1105,25 @@ class MagicDriveSTDiT3(PreTrainedModel):
                 sp_size = dist.get_world_size(get_sequence_parallel_group())
                 assert S % sp_size == 0, f"S={S} should be divisible by {sp_size}!"
 
+        # 1.2 PE 计算
         base_size = round(S**0.5)
         resolution_sq = (height[0].item() * width[0].item()) ** 0.5
         scale = resolution_sq / self.input_sq_size
-        pos_emb = self.pos_embed(x, H, W, scale=scale, base_size=base_size)
+        pos_emb = self.pos_embed(x, H, W, scale=scale, base_size=base_size) # ([1, 1350, C=1152])???
 
-        # === get timestep embed ===
-        t = self.t_embedder(timestep, dtype=x.dtype)  # [B, C]
-        fps = self.fps_embedder(fps.unsqueeze(1), B)
+        # === 1.3 get timestep embed ===
+        t = self.t_embedder(timestep, dtype=x.dtype)  # [B, C]=[2, 1152],t_embedder 将 time step 嵌入为隐藏状态，再加上 fps 嵌入补充运动信息
+        fps = self.fps_embedder(fps.unsqueeze(1), B)  # [B, C]=[2, 1152]
         t = t + fps
-        t_mlp = self.t_block(t)
+        t_mlp = self.t_block(t)# 生成扩展后的 t_mlp，形状为 [B, 6×hidden_size],t_block （一个线性+激活）将 t 转换为用于控制每层的“shift/scale/gate”参数，这个 t_mlp 会在后续 Transformer 块中拆分为 6 部分
         t0 = t0_mlp = None
-        if x_mask is not None:
+        if x_mask is not None: # 如果存在 x_mask，则对全 0 的 t（即 t0）也进行嵌入，用于在 mask 部分替换原特征
             t0_timestep = torch.zeros_like(timestep)
             t0 = self.t_embedder(t0_timestep, dtype=x.dtype)
             t0 = t0 + fps
             t0_mlp = self.t_block(t0)
 
+        # 1.4. 条件信息编码（文本、Bounding Box、摄像头、frame_emb）
         # === get y embed ===
         # we need to remove the T dim in y
         # rel_pos & bbox: T -> 1
@@ -1119,13 +1136,15 @@ class MagicDriveSTDiT3(PreTrainedModel):
             y = rearrange(y, "B T L D -> B (L D) T")
             y = F.interpolate(y, T)
             y = rearrange(y, "B (L D) T -> B T L D", L=seq_len)
-        c = self.encode_map(maps, NC, h_pad_size, x_in_shape)
-        c = rearrange(c, "B (T S) C -> B T S C", T=T)
 
-        # === get x embed ===
-        x_b = self.x_embedder(x)  # [B, N, C]
+        # 1.5. 地图条件编码
+        c = self.encode_map(maps, NC, h_pad_size, x_in_shape)
+        c = rearrange(c, "B (T S) C -> B T S C", T=T) # ([12, 3, 1350, 1152])
+
+        # === 1.6. 图像嵌入（x_embedder）与控制条件融合 get x embed ===
+        x_b = self.x_embedder(x)  # # 得到视觉 token, 原始形状：[B, (T S), hidden_size]=[12, 16, 3, 53, 100]->[B, N, C]
         x_b = rearrange(x_b, "B (T S) C -> B T S C", T=T, S=S)
-        x_b = x_b + pos_emb
+        x_b = x_b + pos_emb # ([12, 3, 1350, 1152]) #! 这里的PE不用变
 
         if self.x_control_embedder is None:
             x_c = x_b
@@ -1134,28 +1153,38 @@ class MagicDriveSTDiT3(PreTrainedModel):
             x_c = rearrange(x_c, "B (T S) C -> B T S C", T=T, S=S)
             x_c = x_c + pos_emb
 
-        c = x_c + self.before_proj(c)  # first block connection
-        x = x_b
+        c = x_c + self.before_proj(c)  # first block connection # 将地图条件经过投影，与控制条件相加   这里 before_proj 仅做一个线性映射，其设计目的是将地图条件与图像条件维度对齐，不需要详细讨论其内部参数初始化
+        x = x_b # [12, 3, 1350, 1152]
 
         # shard over the sequence dim if sp is enabled
+        # 根据是否启用了 sequence parallelism 对 x 和 c 在序列维度上做拆分和重排，目的是为了在多设备上分布式计算
         if self.enable_sequence_parallelism:
             assert not self.sequence_parallelism_temporal, "not support!"
             x = split_forward_gather_backward(x, get_sequence_parallel_group(), dim=2, grad_scale="down")
             c = split_forward_gather_backward(c, get_sequence_parallel_group(), dim=2, grad_scale="down")
             S = S // dist.get_world_size(get_sequence_parallel_group())
-
         # c = torch.randn_like(x)  # change me!
         x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
         c = rearrange(c, "B T S C -> B (T S) C", T=T, S=S)
 
         # === blocks ===
-        if x_mask is not None:
+        '''
+        进入 Transformer 块之前，x 和 c 都已经整理成形状 [B, (T×S), hidden_size]。接下来的代码主要分为两部分：
+
+        第一部分：对于前 control_depth 个 block，同时处理基准块和控制块。
+        第二部分：对于后续的基准块（base_blocks_s/t），只处理 x 分支。
+
+        
+        '''
+        if x_mask is not None: # ([12, 3])
             x_mask = repeat(x_mask, "b ... -> (b NC) ...", NC=NC)
+        
+        # 2.1. 控制块循环（for block_i in range(0, self.control_depth)）
         for block_i in range(0, self.control_depth):
-            x = auto_grad_checkpoint(
-                self.base_blocks_s[block_i],
+            x = auto_grad_checkpoint( # auto_grad_checkpoint 包裹调用用于节省显存，同时允许在前向不完整保存中间激活，后向再重新计算
+                self.base_blocks_s[block_i], 
                 x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S, NC, mv_order_map, t_order_map)
-            c, c_skip = auto_grad_checkpoint(
+            c, c_skip = auto_grad_checkpoint( # 这部分 skip 信息携带了条件（例如多视图信息）对生成结果的修正作用，然后用残差加到 x 上
                 self.control_blocks_s[block_i],
                 c, y, t_mlp, y_lens, x_mask, t0_mlp, T, S, NC, mv_order_map, t_order_map)
             x = x + c_skip  # connection
@@ -1169,7 +1198,8 @@ class MagicDriveSTDiT3(PreTrainedModel):
                     c, y, t_mlp, y_lens, x_mask, t0_mlp, T, S, NC, mv_order_map, t_order_map)
                 x = x + c_skip  # connection
 
-        for block_i in range(self.control_depth, self.depth):
+        # 2.2. 后续基块循环（for block_i in range(self.control_depth, self.depth)）
+        for block_i in range(self.control_depth, self.depth):# 13-28
             x = auto_grad_checkpoint(
                 self.base_blocks_s[block_i],
                 x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S, NC, mv_order_map, t_order_map)
@@ -1184,13 +1214,15 @@ class MagicDriveSTDiT3(PreTrainedModel):
             S = S * dist.get_world_size(get_sequence_parallel_group())
             x = rearrange(x, "B T S C -> B (T S) C", T=T, S=S)
 
-        # === final layer ===
-        x = self.final_layer(
+        # 3.1. Final Layer 与 Unpatchify
+        # final_layer 和 unpatchify 内部只是对张量形状做转换和线性映射，与条件注入逻辑无关，所以不展开
+        x = self.final_layer( # final_layer（T2IFinalLayer）对经过 Transformer 块处理后的 x 进行最终的线性映射，获得输出的 latent 表示
             x, repeat(t, "b d -> (b NC) d", NC=NC),
             x_mask, repeat(t0, "b d -> (b NC) d", NC=NC) if t0 is not None else None,
             T, S,
         )
-        x = self.unpatchify(x, T, H, W, Tx, Hx, Wx)
+        x = self.unpatchify(x, T, H, W, Tx, Hx, Wx) # 调用 unpatchify 将 patch 序列还原成视频帧形式
+        # x:12, 4050, 1152->[12, 4050, 64]
 
         # cast to float32 for better accuracy
         x = x.to(torch.float32)

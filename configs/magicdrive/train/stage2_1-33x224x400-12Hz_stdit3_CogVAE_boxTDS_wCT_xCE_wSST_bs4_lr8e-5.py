@@ -19,9 +19,9 @@ video_lengths_fps = {  # all lengths are 8n or 8n+1
 dataset_cfg_overrides = [
     (
         # key, value
-        ("dataset.dataset_process_root", "./data/nuscenes_mmdet3d-12Hz/"),
-        ("dataset.data.train.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
-        ("dataset.data.val.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
+        ("dataset.dataset_process_root", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/"),
+        ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
+        ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
         ("dataset.data.train.type", "NuScenesVariableDataset"),
         ("dataset.data.val.type", "NuScenesVariableDataset"),
         ("dataset.data.train.video_length", video_lengths_fps["224x400"][0]),
@@ -30,8 +30,8 @@ dataset_cfg_overrides = [
         ("dataset.data.val.fps", video_lengths_fps["224x400"][1]),
     ), (
         # key, value
-        ("dataset.data.train.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
-        ("dataset.data.val.ann_file", "./data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
+        ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
+        ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
         ("dataset.data.train.type", "NuScenesVariableDataset"),
         ("dataset.data.val.type", "NuScenesVariableDataset"),
         ("dataset.data.train.video_length", video_lengths_fps["424x800"][0]),
@@ -93,7 +93,7 @@ dtype = "bf16"
 sp_size = 1
 plugin = "zero2-seq" if sp_size > 1 else "zero2"
 grad_checkpoint = True  # CHANGED
-batch_size = None  # CHANGED
+batch_size = 1  # CHANGED
 drop_cond_ratio = 0.15
 
 # Acceleration settings
@@ -193,7 +193,7 @@ model = dict(
     # force_huggingface=True,  # if `from_pretrained` is a repo from hf, use this.
 )
 
-partial_load="./ckpts/MagicDriveSTDiT3-XL-2_stage1_noTemp_step80000"
+# partial_load="./ckpts/MagicDriveSTDiT3-XL-2_stage1_noTemp_step80000"
 
 
 vae = dict(

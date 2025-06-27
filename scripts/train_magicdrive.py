@@ -504,15 +504,11 @@ def main():
                         if cfg.get("load_video_features", False):
                             x = x.to(device, dtype)
                         else:
-                            # if USE_NPU:
-                            if False:
-                                x = vae.encode(x)  # [B, C, T, H/P, W/P]
-                            else:
-                                with RandomStateManager(verbose=verbose_mode): # 控制 PyTorch 随机数生成器的状态，确保 并行计算的确定性
-                                    # NOTE: due to randomness, they may not match!
-                                    x = sp_vae(x, vae.encode, # 分开用vae.encode
-                                               get_sequence_parallel_group()) # 获取 ColossalAI 注册的 "sequence" 并行进程组（ProcessGroup）
-                            # assert torch.allclose(x_old, x)
+                            with RandomStateManager(verbose=verbose_mode): # 控制 PyTorch 随机数生成器的状态，保持多进程/并行运算的一致性
+                                # NOTE: due to randomness, they may not match!
+                                x = sp_vae(x, vae.encode, # 分开用vae.encode
+                                            get_sequence_parallel_group()) # 获取 ColossalAI 注册的 "sequence" 并行进程组（ProcessGroup）,对 VAE 进行并行编码
+                        
                         # Prepare text inputs
                         if cfg.get("load_text_features", False):
                             model_args = {"y": y.to(device, dtype)}
@@ -543,7 +539,7 @@ def main():
                             if random.random() < drop_cond_ratio:  # we need drop
                                 drop_cond_mask[bs] = 0
                                 drop_frame_mask[bs, :] = 0
-                                model_args["mask"][bs] = 1  # need to keep all tokens if uncond
+                                model_args["mask"][bs] = 1  # 无条件生成时，需保留所有文本 token
                                 continue
                             # 2. otherwise, we randomly pick some frames to drop
                             # make sure we do not drop the first and the last frame
@@ -593,7 +589,7 @@ def main():
                 if record_time:
                     timer_list.append(loss_t)
                 # NOTE: backward needs all_reduce, we sychronize here!
-                coordinator.block_all()
+                coordinator.block_all() # 确保多进程训练中各个进程在进行梯度反传前已同步最新状态
 
                 if verbose_mode:
                     logger.info(f"Start model backward step! step={step}, loss={loss_dict['loss']}")
