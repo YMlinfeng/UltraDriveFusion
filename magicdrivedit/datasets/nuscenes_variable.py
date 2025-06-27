@@ -79,22 +79,24 @@ class NuScenesVariableDataset(NuScenesTDataset):
         self.base_fps = base_fps  # 原始帧率，默认 12
         self.drop_ori_imgs = drop_ori_imgs  # 是否丢弃原始图像 ？
 
-    @property
-    def num_frames(self):
-        raise NotImplementedError()
+    @property # Python 的装饰器：将方法变成属性调用（不加括号）
+    def num_frames(self): # 定义一个名为 num_frames 的方法（被转为属性）# 设计初衷是返回数据集中每个 clip 的帧数（即视频长度），但目前还没有实现，抛出了异常
+        raise NotImplementedError() # # 表示该方法尚未实现，调用会抛出错误，通常用于抽象基类或等待子类实现的函数
 
     def build_clips(self, data_infos, scene_tokens, video_length, repeat_times=1):
         """Since the order in self.data_infos may change on loading, we
         calculate the index for clips after loading.
-
+        将每个场景（scene）中的帧（frame）切割成固定长度的视频片段（clip）用于训练。
+        它根据参数 video_length 和 repeat_times，生成一批批连续帧索引组成的 clip。
         Args:
-            data_infos (list of dict): loaded data_infos
-            scene_tokens (2-dim list of str): 2-dim list for tokens to each
-            scene 
+            data_infos (list of dict): 已加载的数据帧信息，每一项是一个 dict（包含时间戳、token 等）
+            scene_tokens (2-dim list of str): 每个 scene 的 token 列表，是个二维列表
+            video_length (int or str): 每个 clip 的帧数，或 "full" 表示用整段
+            repeat_times (int): 每段 clip 重复几次（用于扩充数据）
 
         Returns:
-            2-dim list of int: int is the index in self.data_infos
-        """
+            list[list[int]]: 返回二维索引列表，每个子列表是一个 clip（帧索引组成）
+    """
         self.token_data_dict = {
             item['token']: idx for idx, item in enumerate(data_infos)}
         if self.balance_keywords is not None:
@@ -131,7 +133,7 @@ class NuScenesVariableDataset(NuScenesTDataset):
                      f"continuous scenes. Cut into {video_length}-clip, "
                      f"which has {len(all_clips)} in total. We skip {skip1} + "
                      f"{skip2} = {skip1 + skip2} possible starting frames.")
-        return all_clips
+        return all_clips #  # 返回二维列表：每个子列表是一个 clip（帧索引序列）
 
     def load_annotations(self, ann_file):
         """Load annotations from ann_file.
