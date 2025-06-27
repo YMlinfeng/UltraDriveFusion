@@ -16,12 +16,19 @@ from .nuscenes_t_dataset import NuScenesTDataset
 from .utils import IMG_FPS
 
 
-@DATASETS.register_module()
+@DATASETS.register_module()# # 注册这个类到 DATASETS 注册表中，方便通过配置文件调用
 class NuScenesVariableDataset(NuScenesTDataset):
+    '''
+    支持视频帧序列的加载（而不是单张图片）
+    支持不同长度的视频片段（例如 3 帧、6 帧、12 帧）
+    支持不同采样频率（FPS）
+    可以将整个视频切分为多个小片段用于训练
+    可以根据配置进行数据增强、过滤等逻辑
+    '''
     def __init__(
         self,
         ann_file,
-        pipeline=None,
+        pipeline=None, # 参数后面的 = None 是默认值，表示该参数是可选的
         dataset_root=None,
         object_classes=None,
         map_classes=None,
@@ -34,25 +41,26 @@ class NuScenesVariableDataset(NuScenesTDataset):
         eval_version="detection_cvpr_2019",
         use_valid_flag=False,
         force_all_boxes=False,
-        video_length: list[int] = None,
-        start_on_keyframe=True,
+        video_length: list[int] = None, # # 视频长度列表，如 [3, 6, 12]
+        start_on_keyframe=True, # # 是否从关键帧开始
         next2topv2=True,
         trans_box2top=False,
-        base_fps=12,
-        fps: list[list[int]] = None,
-        repeat_times: list[int] = None,
-        img_collate_param={},
-        micro_frame_size=None,
-        balance_keywords=None,
-        drop_ori_imgs=False,
-    ) -> None:
+        base_fps=12,  # 原始帧率
+        fps: list[list[int]] = None,  # 每种视频长度下的采样帧率列表，如 [[3, 6, 12], [3, 6]]
+        repeat_times: list[int] = None,  # 每种长度数据重复多少次
+        img_collate_param={},  # 图像合并参数
+        micro_frame_size=None,  # 微帧数（用于裁剪）
+        balance_keywords=None,  # 平衡数据关键词
+        drop_ori_imgs=False,  # 是否丢弃原始图像
+    ) -> None:  # 注意这里使用了类型注解 -> None，表示这个函数不返回任何内容
         self.video_lengths = video_length
         self.start_on_keyframe = start_on_keyframe
         self.fps = fps
         self.micro_frame_size = micro_frame_size
         self.repeat_times = repeat_times
         self.balance_keywords = balance_keywords
-        NuScenesDataset.__init__(
+        # 调用父类 NuScenesDataset 的构造函数来初始化基础功能
+        NuScenesDataset.__init__( # 类名.__init__(self, ...) 是一种显式调用父类初始化的方法（另一种是 super().__init__()）
             self, ann_file, pipeline, dataset_root, object_classes, map_classes,
             load_interval, with_velocity, modality, box_type_3d,
             filter_empty_gt, test_mode, eval_version, use_valid_flag,
@@ -60,16 +68,16 @@ class NuScenesVariableDataset(NuScenesTDataset):
         if "12Hz" in ann_file and start_on_keyframe:
             logging.warning("12Hz should use all starting frame to train, please "
                          "double-check!")
-        self.next2topv2 = next2topv2
-        self.trans_box2top = trans_box2top
-        self.allow_class = None
-        self.del_box_ratio = 0.0
-        self.drop_nearest_car = 0
-        self.img_collate_param = img_collate_param
+        self.next2topv2 = next2topv2  # 控制是否从 next 转换为 top 帧 ???
+        self.trans_box2top = trans_box2top  # 是否转换 box 坐标到 top 视角 ?
+        self.allow_class = None  # 允许的类别（未初始化） ?
+        self.del_box_ratio = 0.0  # 删除 box 的概率  ?
+        self.drop_nearest_car = 0  # 是否丢弃最近的车辆 ?
+        self.img_collate_param = img_collate_param  # 图像合并参数 ?
         if isinstance(self.img_collate_param, ConfigDict):
-            self.img_collate_param = img_collate_param.to_dict()
-        self.base_fps = base_fps
-        self.drop_ori_imgs = drop_ori_imgs
+            self.img_collate_param = img_collate_param.to_dict() # # 转换为普通 Python 字典
+        self.base_fps = base_fps  # 原始帧率，默认 12
+        self.drop_ori_imgs = drop_ori_imgs  # 是否丢弃原始图像 ？
 
     @property
     def num_frames(self):
