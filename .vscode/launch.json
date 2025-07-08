@@ -30,38 +30,40 @@
 //       }
 //     ]
 //   }
-{
-    // stage 2
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Python: Train MagicDrive (4 GPU - torchrun)",
-        "type": "python",
-        "request": "launch",
-        "python": "/mnt/bn/occupancy3d/workspace/mzj/env/magic/bin/python3",
-        "program": "/usr/local/lib/python3.9/dist-packages/torch/distributed/launch.py",
-        "args": [
-          "--nnodes=1",
-          "--nproc-per-node=1",
-          "--master-addr=localhost",
-          "--master-port=12346",
-          "--use-env",
-          "scripts/train_magicdrive.py",
-          "configs/magicdrive/train/stage2_1-33x224x400-12Hz_stdit3_CogVAE_boxTDS_wCT_xCE_wSST_bs4_lr8e-5.py",
-          "--cfg-options",
-          "num_workers=8",
-          "prefetch_factor=2"
-        ],
-        "env": {
-          "CUDA_VISIBLE_DEVICES": "0,1,2,3",
-          "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "1.25"
-        },
-        "console": "integratedTerminal",
-        "justMyCode": false, 
-        "subProcess": true  
-      }
-    ]
-  }
+
+// {
+//     // stage 2
+//     "version": "0.2.0",
+//     "configurations": [
+//       {
+//         "name": "Python: Train MagicDrive (4 GPU - torchrun)",
+//         "type": "python",
+//         "request": "launch",
+//         "python": "/mnt/bn/occupancy3d/workspace/mzj/env/magic/bin/python3",
+//         "program": "/usr/local/lib/python3.9/dist-packages/torch/distributed/launch.py",
+//         "args": [
+//           "--nnodes=1",
+//           "--nproc-per-node=1",
+//           "--master-addr=localhost",
+//           "--master-port=12346",
+//           "--use-env",
+//           "scripts/train_magicdrive.py",
+//           "configs/magicdrive/train/stage2_1-33x224x400-12Hz_stdit3_CogVAE_boxTDS_wCT_xCE_wSST_bs4_lr8e-5.py",
+//           "--cfg-options",
+//           "num_workers=8",
+//           "prefetch_factor=2"
+//         ],
+//         "env": {
+//           "CUDA_VISIBLE_DEVICES": "0,1,2,3",
+//           "PYDEVD_WARN_SLOW_RESOLVE_TIMEOUT": "1.25"
+//         },
+//         "console": "integratedTerminal",
+//         "justMyCode": false, 
+//         "subProcess": true  
+//       }
+//     ]
+//   }
+
 // {
 //     // stage 3
 //     "version": "0.2.0",
