@@ -16,7 +16,6 @@ sudo chown -R tiger:tiger /mnt/bn/occupancy3d/workspace/mzj/MagicDriveDiT/
 #   --config-settings="--build-option=--cpp_ext" \
 #   --config-settings="--build-option=--cuda_ext" ./
 
-# 可选：修复权限和安装额外库
 sudo apt update
 sudo apt install libgl1-mesa-glx -y
 
