@@ -2,19 +2,55 @@
 num_frames = None
 bbox_mode = 'all-xyz'
 
+# 原始混合数据集
+# data_cfg_names = [
+#     ((224, 400), "Nuscenes_map_cache_box_t_with_n2t_12Hz"),
+#     ((424, 800), "Nuscenes_400_map_cache_box_t_with_n2t_12Hz"),
+# ]
+# video_lengths_fps = {  # all lengths are 8n or 8n+1
+#     "224x400": [
+#         [1, 9, 17, 33, 65,],
+#         [[120,], [12,], [12], [12], [12]],
+#     ],
+#     "424x800": [
+#         [1, 9, 17, 33,],
+#         [[120,], [12,], [12], [12]],
+#     ],
+# }
+# dataset_cfg_overrides = [
+#     (
+#         # key, value
+#         ("dataset.dataset_process_root", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/"),
+#         ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
+#         ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
+#         ("dataset.data.train.type", "NuScenesVariableDataset"),
+#         ("dataset.data.val.type", "NuScenesVariableDataset"),
+#         ("dataset.data.train.video_length", video_lengths_fps["224x400"][0]),
+#         ("dataset.data.train.fps", video_lengths_fps["224x400"][1]),
+#         ("dataset.data.val.video_length", video_lengths_fps["224x400"][0]),
+#         ("dataset.data.val.fps", video_lengths_fps["224x400"][1]),
+#     ), (
+#         # key, value
+#         ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
+#         ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
+#         ("dataset.data.train.type", "NuScenesVariableDataset"),
+#         ("dataset.data.val.type", "NuScenesVariableDataset"),
+#         ("dataset.data.train.video_length", video_lengths_fps["424x800"][0]),
+#         ("dataset.data.train.fps", video_lengths_fps["424x800"][1]),
+#         ("dataset.data.val.video_length", video_lengths_fps["424x800"][0]),
+#         ("dataset.data.val.fps", video_lengths_fps["424x800"][1]),
+#     ),
+# ]
+
+# 测试：单一数据集
 data_cfg_names = [
-    ((224, 400), "Nuscenes_map_cache_box_t_with_n2t_12Hz"),
-    ((424, 800), "Nuscenes_400_map_cache_box_t_with_n2t_12Hz"),
+    ((224, 400), "Nuscenes_map_cache_box_t_with_n2t_12Hz")
 ]
 video_lengths_fps = {  # all lengths are 8n or 8n+1
     "224x400": [
         [1, 9, 17, 33, 65,],
         [[120,], [12,], [12], [12], [12]],
-    ],
-    "424x800": [
-        [1, 9, 17, 33,],
-        [[120,], [12,], [12], [12]],
-    ],
+    ]
 }
 dataset_cfg_overrides = [
     (
@@ -28,17 +64,7 @@ dataset_cfg_overrides = [
         ("dataset.data.train.fps", video_lengths_fps["224x400"][1]),
         ("dataset.data.val.video_length", video_lengths_fps["224x400"][0]),
         ("dataset.data.val.fps", video_lengths_fps["224x400"][1]),
-    ), (
-        # key, value
-        ("dataset.data.train.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_train_with_bid.pkl"),
-        ("dataset.data.val.ann_file", "/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz/nuscenes_interp_12Hz_infos_val_with_bid.pkl"),
-        ("dataset.data.train.type", "NuScenesVariableDataset"),
-        ("dataset.data.val.type", "NuScenesVariableDataset"),
-        ("dataset.data.train.video_length", video_lengths_fps["424x800"][0]),
-        ("dataset.data.train.fps", video_lengths_fps["424x800"][1]),
-        ("dataset.data.val.video_length", video_lengths_fps["424x800"][0]),
-        ("dataset.data.val.fps", video_lengths_fps["424x800"][1]),
-    ),
+    )
 ]
 
 img_collate_param_train = dict(

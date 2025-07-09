@@ -52,6 +52,19 @@ class NuScenesDataset(Custom3DDataset):
             Defaults to  'detection_cvpr_2019'.
         use_valid_flag (bool): Whether to use `use_valid_flag` key in the info
             file as mask to filter gt_boxes and gt_names. Defaults to False.
+        翻译：
+        ann_file	str	标注信息文件路径，通常为 .pkl
+        pipeline	list[dict]	数据预处理流程
+        dataset_root	str	数据集根目录
+        object_classes	tuple[str]	使用的物体类别
+        load_interval	int	加载数据的间隔（下采样）
+        with_velocity	bool	是否加载物体速度信息
+        modality	dict	指定输入模态（LiDAR/Camera等）
+        box_type_3d	str	使用的3D框类型（LiDAR/Camera）
+        filter_empty_gt	bool	是否过滤空标注
+        test_mode	bool	是否为测试模式
+        eval_version	str	NuScenes评估版本
+        use_valid_flag	bool	是否使用 valid_flag 过滤标注
     """
     NameMapping = {
         "movable_object.barrier": "barrier",
@@ -178,6 +191,10 @@ class NuScenesDataset(Custom3DDataset):
             dict[list]: for each category, if the current scene
                 contains such boxes, store a list containing idx,
                 otherwise, store empty list.
+
+        获取某一帧图像中包含的类别编号。
+            输入：idx：索引
+            输出：List[int]：该帧中出现的类别编号
         """
         info = self.data_infos[idx]
         if self.use_valid_flag and not self.force_all_boxes:
@@ -200,6 +217,11 @@ class NuScenesDataset(Custom3DDataset):
 
         Returns:
             list[dict]: List of annotations sorted by timestamps.
+
+        加载标注文件并排序。
+
+            输入：ann_file：文件路径
+            输出：List[Dict]：每帧数据的信息列表，按时间排序
         """
         data = mmcv.load(ann_file)
         data_infos = list(sorted(data["infos"], key=lambda e: e["timestamp"]))
@@ -209,6 +231,12 @@ class NuScenesDataset(Custom3DDataset):
         return data_infos
 
     def get_data_info(self, index: int) -> Dict[str, Any]:
+        '''
+        构造某一帧数据的信息，包括 sensor 校准、位姿变换、图片路径等。
+
+            输入：index：数据索引
+            输出：Dict[str, Any]：包含Lidar路径、变换矩阵、标注信息等
+        '''
         info = self.data_infos[index]
 
         data = dict(
@@ -304,6 +332,16 @@ class NuScenesDataset(Custom3DDataset):
                     3D ground truth bboxes
                 - gt_labels_3d (np.ndarray): Labels of ground truths.
                 - gt_names (list[str]): Class names of ground truths.
+
+        获取某一帧的标注信息。
+
+            输入：index：数据索引
+            输出：
+            Dict：包含以下字段：
+            gt_bboxes_3d：真实3D框（LiDARInstance3DBoxes）
+            gt_labels_3d：类别标签
+            gt_names：类别名
+            mask：掩码，用于过滤无效框
         """
         info = self.data_infos[index]
         # filter out bbox containing no points
@@ -354,6 +392,13 @@ class NuScenesDataset(Custom3DDataset):
 
         Returns:
             str: Path of the output json file.
+
+        将检测结果格式化为 NuScenes 官方评估所需的 JSON 格式。
+
+        输入：
+        results：模型输出结果列表
+        jsonfile_prefix：输出文件前缀
+        输出：保存的 json 文件路径
         """
         nusc_annos = {}
         mapped_class_names = self.CLASSES
@@ -435,6 +480,13 @@ class NuScenesDataset(Custom3DDataset):
 
         Returns:
             dict: Dictionary of evaluation details.
+
+        使用 NuScenes 官方工具评估预测结果。
+
+            输入：
+            result_path：预测结果 JSON 路径
+            输出：
+            Dict[str, float]：各类指标（mAP、mATE、mASE、mAOE等）
         """
         from nuscenes import NuScenes
         from nuscenes.eval.detection.evaluate import DetectionEval
@@ -487,6 +539,14 @@ class NuScenesDataset(Custom3DDataset):
                 dict containing the json filepaths, `tmp_dir` is the temporal \
                 directory created for saving json files when \
                 `jsonfile_prefix` is not specified.
+
+        调用 _format_bbox 格式化结果，同时创建临时目录。
+
+            输入：
+            results：模型预测结果
+            jsonfile_prefix：输出路径前缀（可选）
+            输出：
+            (result_files, tmp_dir)：格式化后的结果文件路径和临时目录
         """
         assert isinstance(results, list), "results must be a list"
         assert len(results) == len(
@@ -505,6 +565,15 @@ class NuScenesDataset(Custom3DDataset):
         return result_files, tmp_dir
 
     def evaluate_map(self, results):
+        '''
+        对 BEV 语义分割结果进行 mIoU 评估。
+
+            输入：
+            results：包含 masks_bev 和 gt_masks_bev 的结果
+            输出：
+            Dict[str, float]：每类 IoU 和 mIoU
+        
+        '''
         thresholds = torch.tensor([0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65])
 
         num_classes = len(self.map_classes)
@@ -557,6 +626,13 @@ class NuScenesDataset(Custom3DDataset):
 
         Returns:
             dict[str, float]: Results of each evaluation metric.
+
+        主评估方法，支持检测和 BEV 语义分割评估。
+
+            输入：
+            results：模型预测结果
+            输出：
+            Dict[str, float]：评估指标结果
         """
 
         metrics = {}
@@ -593,6 +669,13 @@ def output_to_nusc_box(detection):
 
     Returns:
         list[:obj:`NuScenesBox`]: List of standard NuScenesBoxes.
+
+    将模型预测的 3D 框转换为 NuScenesBox 格式。
+
+        输入：
+        detection：包含 boxes_3d、scores_3d、labels_3d
+        输出：
+        List[NuScenesBox]
     """
     box3d = detection["boxes_3d"]
     scores = detection["scores_3d"].numpy()
@@ -642,6 +725,14 @@ def lidar_nusc_box_to_global(
     Returns:
         list: List of standard NuScenesBoxes in the global
             coordinate.
+
+    将预测框从激光雷达坐标系转换到全局坐标系。
+
+        输入：
+        info：当前帧信息
+        boxes：NuScenesBox 列表
+        输出：
+        List[NuScenesBox]：全局坐标下的框
     """
     box_list = []
     for box in boxes:

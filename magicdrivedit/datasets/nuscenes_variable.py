@@ -256,7 +256,7 @@ class NuScenesMultiResDataset(torch.utils.data.Dataset):
         return self.datasets[(real_h, real_w)][sub_index]
 
 
-class NuScenesVariableBatchSampler(torch.utils.data.DistributedSampler):
+class NuScenesVariableBatchSampler(torch.utils.data.DistributedSampler): #prepare_dataloader()用到
     def __init__(
         self,
         dataset: NuScenesMultiResDataset,

@@ -18,7 +18,7 @@ from ..mmdet_plugin.core.bbox import LiDARInstance3DBoxes
 from .utils import trans_boxes_to_views, IMG_FPS
 
 
-def transform_bbox(first_frame_boxes, next2top: np.ndarray):
+def transform_bbox(first_frame_boxes, next2top: np.ndarray): # 将当前帧 box 映射到第一帧坐标系
     gt_bboxes_3d = first_frame_boxes['gt_bboxes_3d'].data.tensor
     gt_bboxes_3d = LiDARInstance3DBoxes(
         gt_bboxes_3d, box_dim=gt_bboxes_3d.shape[-1], origin=(0.5, 0.5, 0)
@@ -34,7 +34,7 @@ def transform_bbox(first_frame_boxes, next2top: np.ndarray):
     }
 
 
-def obtain_next2top(first, current, epsilon=1e-6, v2=True):
+def obtain_next2top(first, current, epsilon=1e-6, v2=True): # 计算当前帧相对第一帧的变换矩阵
     l2e_r = first["lidar2ego_rotation"]
     l2e_t = first["lidar2ego_translation"]
     e2g_r = first["ego2global_rotation"]
@@ -105,7 +105,7 @@ META_KEY_LIST = [
 ]
 
 
-def _tokenize_captions(examples, template, tokenizer=None, is_train=True):
+def _tokenize_captions(examples, template, tokenizer=None, is_train=True): # 将自然语言描述转换为 token ids
     captions = []
     for example in examples:
         caption = template.format(**example["metas"].data)
@@ -163,7 +163,7 @@ def random_0_to_1(mask: np.array, num):
     return mask
 
 
-def _transform_all(examples, matrix_key, proj):
+def _transform_all(examples, matrix_key, proj): # 将 3D box 投影到图像视角
     """project all bbox to views, return 2d coordinates.
 
     Args:
@@ -197,7 +197,7 @@ def _transform_all(examples, matrix_key, proj):
     return bboxes_coord
 
 
-def _preprocess_bbox_keep_all(
+def _preprocess_bbox_keep_all( # 生成多视角 box、mask、类别等结构化数据
         bbox_mode, canvas_size, examples, is_train=True, view_shared=False,
         use_3d_filter=True, bbox_add_ratio=0, bbox_add_num=0, bbox_drop_ratio=0,
         keyframe_rate=1):
@@ -359,9 +359,9 @@ def _preprocess_bbox_keep_all(
     return ret_dict, bboxes_coord
 
 
-def _preprocess_bbox(bbox_mode, canvas_size, examples, is_train=True,
+def _preprocess_bbox(bbox_mode, canvas_size, examples, is_train=True, # 生成多视角 box、mask、类别等结构化数据
                      view_shared=False, use_3d_filter=True, bbox_add_ratio=0,
-                     bbox_add_num=0, bbox_drop_ratio=0, keyframe_rate=1):
+                     bbox_add_num=0, bbox_drop_ratio=0, keyframe_rate=1): 
     """Pre-processing for bbox
     .. code-block:: none
 
@@ -542,7 +542,8 @@ def draw_cube_mask(canvas_size, coords):
     return canvas[..., 0]
 
 
-def _get_fg_cube_mask(bbox_view_coord, canvas_size, examples):
+def _get_fg_cube_mask(bbox_view_coord, canvas_size, examples): # 生成前景 BEV mask（用于前景损失）
+
     """get foreground mask according to bbox
 
     Args:
@@ -571,7 +572,7 @@ def _get_fg_cube_mask(bbox_view_coord, canvas_size, examples):
     return view_fg_mask
 
 
-def collate_fn_single_clip(
+def collate_fn_single_clip( # 将多个帧的样本合并为一个训练样本
     examples: Tuple[dict, ...],
     template: str,
     frame_emb=None,
@@ -722,6 +723,21 @@ def collate_fn_single_clip(
 
 @DATASETS.register_module()
 class NuScenesTDataset(NuScenesDataset):
+    '''
+    新增参数说明：
+    参数名	说明
+    video_length	视频 clip 的帧数（或 'full' 表示整段）
+    start_on_keyframe	是否从 Keyframe 开始采样
+    start_on_firstframe	是否从第一帧开始采样
+    next2topv2	是否采用变换矩阵的第二种形式
+    trans_box2top	是否将 box 坐标变换到第一帧坐标系
+    img_collate_param	图像 collate 的配置字典，用于打包训练样本
+    balance_keywords	平衡采样关键字，用于数据分布均衡
+    del_box_ratio	随机删除 box 的比例
+    drop_nearest_car	删除最近车辆的个数
+    drop_ori_imgs	是否丢弃原图，节省显存
+    
+    '''
     def __init__(
         self,
         ann_file,
@@ -783,7 +799,10 @@ class NuScenesTDataset(NuScenesDataset):
     def num_frames(self):
         return self.video_length
 
-    def balance_annotations(self, data_infos, scene_tokens):
+    def balance_annotations(self, data_infos, scene_tokens): # 用于对训练数据按关键词进行采样均衡（防止某些场景如 daytime、night 不均衡）
+        '''
+        用于对训练数据按关键词进行采样均衡（防止某些场景如 daytime、night 不均衡）
+        '''
         keywords_dict = {k: [] for k in self.balance_keywords}
         if "none" in keywords_dict:  # we care about none: will force add "daytime"
             prepend_daytime = True
@@ -898,9 +917,9 @@ class NuScenesTDataset(NuScenesDataset):
         return data_infos
 
     def __len__(self):
-        return len(self.clip_infos)
+        return len(self.clip_infos) # 返回 clip 的数量，不是帧数！
 
-    def load_clip(self, clip):
+    def load_clip(self, clip): # 加载一个 clip 的所有帧数据,并计算每帧到第一帧的变换矩阵 next2top
         frames = []
         first_info = self.data_infos[clip[0]]
         for frame in clip:
@@ -1069,7 +1088,7 @@ class NuScenesTDataset(NuScenesDataset):
             assert self.num_frames == len(frames)
         return ret_dicts
         
-    def prepare_test_data(self, index):
+    def prepare_test_data(self, index): # not implement
         raise NotImplementedError()
 
 

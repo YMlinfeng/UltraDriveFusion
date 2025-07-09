@@ -118,7 +118,7 @@ def main():
     device = get_current_device()
 
     # == init exp_dir ==
-    if cfg.get("overfit", None) is not None:
+    if cfg.get("overfit", None) is not None: # None
         cfg.tag = f"{cfg.tag}_" if cfg.get("tag", "") != "" else ""
         cfg.tag += "overfit-" + str(cfg.get("overfit", None))
     exp_name, exp_dir = define_experiment_workspace(cfg, use_date=True)
@@ -156,8 +156,8 @@ def main():
     # ======================================================
     logger.info("Building dataset...")
     # == build dataset ==
-    dataset = build_module(cfg.dataset, DATASETS)
-    if cfg.get("overfit", None) is not None:
+    dataset = build_module(cfg.dataset, DATASETS) #todo builder函数，怎么对应到具体的代码的
+    if cfg.get("overfit", None) is not None: # None
         _overfit_idxs = random.sample(range(len(dataset)), cfg.overfit)
         logger.info(f"Overfit on: {_overfit_idxs}")
         overfit_idxs = []
@@ -166,7 +166,7 @@ def main():
             random.shuffle(_overfit_idxs)
         cfg.epochs = 1
         dataset = torch.utils.data.Subset(dataset, overfit_idxs)
-    logger.info("Dataset contains %s samples.", len(dataset))
+    logger.info("Dataset contains %s samples.", len(dataset)) # 742400 samples
 
     # == build dataloader ==
     dataloader_args = dict(
@@ -174,18 +174,18 @@ def main():
         batch_size=cfg.get("batch_size", None),
         num_workers=cfg.get("num_workers", 4),
         seed=cfg.get("seed", 1024),
-        shuffle=True if cfg.get("overfit", None) is None else False,
+        shuffle=True if cfg.get("overfit", None) is None else False, # 如果设置了 overfit，通常表示要对特定数据（例如调试或过拟合小样本测试）进行固定采样，此时不需要随机洗牌
         drop_last=True,
-        pin_memory=True,
+        pin_memory=True, # 在数据加载时将数据复制到固定内存中，有助于 GPU 数据传输时提高效率
         process_group=get_data_parallel_group(),
-        prefetch_factor=cfg.get("prefetch_factor", None),
+        prefetch_factor=cfg.get("prefetch_factor", None), # 设置预取系数，用来控制提前准备数据批次的量，优化数据加载性能
     )
     dataloader, sampler = prepare_dataloader(
         bucket_config=cfg.get("bucket_config", None),
-        num_bucket_build_workers=cfg.get("num_bucket_build_workers", 1),
+        num_bucket_build_workers=cfg.get("num_bucket_build_workers", 1), # 16
         **dataloader_args,
     )
-    num_steps_per_epoch = len(dataloader) #4 * 7032=28128
+    num_steps_per_epoch = len(dataloader) #4 * 7032=28128 # 266928
 
     # val
     if cfg.get("overfit", None) is not None:
@@ -218,7 +218,7 @@ def main():
                 val_dataset, cfg.val.validation_index)
         else:
             raise NotImplementedError()
-    logger.info("Val Dataset contains %s samples.", len(val_dataset))
+    logger.info("Val Dataset contains %s samples.", len(val_dataset)) # 10 ???
     dataloader_args['shuffle'] = False
     dataloader_args['dataset'] = val_dataset
     dataloader_args['batch_size'] = cfg.val.get("batch_size", 1)

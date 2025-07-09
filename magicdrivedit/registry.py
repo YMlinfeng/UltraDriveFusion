@@ -19,7 +19,7 @@ def build_module(module, builder, **kwargs):
         return None
     if isinstance(module, dict):
         cfg = deepcopy(module)
-        for k, v in kwargs.items():
+        for k, v in kwargs.items(): # kwargs.items()是空的
             cfg[k] = v
         return builder.build(cfg) # 使用注册器 builder 的 .build(cfg) 方法，根据配置字典构建一个模块（如一个模型）
     elif isinstance(module, nn.Module):
