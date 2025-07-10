@@ -26,7 +26,7 @@ dtype = "bf16"
 sp_size = 1
 plugin = "zero2-seq" if sp_size > 1 else "zero2"
 grad_checkpoint = False
-batch_size = 2
+batch_size = 1
 drop_cond_ratio = 0.15
 
 # Acceleration settings

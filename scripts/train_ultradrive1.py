@@ -61,17 +61,8 @@ def main():
     # ======================================================
     # 1. configs & runtime variables
     # ======================================================
-    # == parse configs ==
     cfg = parse_configs(training=True) # <class 'mmengine.config.config.Config'>
-    # if cfg.get("vsdebug", False):
-    #     import debugpy
-    #     debugpy.listen(5678)
-    #     print("Waiting for debugger attach")
-    #     debugpy.wait_for_client()
-    #     print('Attached, continue...')
-    #     cfg.record_time = True
-    # enable_debug = cfg.get("debug", False)
-    # 选择一个可用端口或让系统自动分配
+
     enable_debug = True
     
     if enable_debug:
@@ -84,7 +75,7 @@ def main():
     record_time = cfg.get("record_time", False)
 
     # data config
-    if cfg.num_frames is None:  # variable length dataset!
+    if cfg.num_frames is None:  # variable length dataset! # stage2
         num_data_cfgs = len(cfg.data_cfg_names)
         datasets = []
         val_datasets = []
@@ -95,7 +86,7 @@ def main():
             val_datasets.append((res, val_dataset))
         cfg.dataset = {"type": "NuScenesMultiResDataset", "cfg": datasets}
         cfg.val_dataset = {"type": "NuScenesMultiResDataset", "cfg": val_datasets}
-    else:  # single dataset!
+    else:  # single dataset! # stage1
         cfg.dataset, cfg.val_dataset = merge_dataset_cfg(
             cfg, cfg.data_cfg_name, cfg.get("dataset_cfg_overrides", []),
             cfg.num_frames)
@@ -105,20 +96,16 @@ def main():
     cfg_dtype = cfg.get("dtype", "bf16")
     assert cfg_dtype in ["fp16", "bf16"], f"Unknown mixed precision {cfg_dtype}"
     dtype = to_torch_dtype(cfg.get("dtype", "bf16"))
-
-    # == colossalai init distributed training ==
-    # NOTE: A very large timeout is set to avoid some processes exit early
     dist.init_process_group(backend="nccl", timeout=timedelta(hours=24))
     torch.cuda.set_device(dist.get_rank() % torch.cuda.device_count())
     set_seed(cfg.get("seed", 1024))
     torch.cuda.manual_seed_all(cfg.get("seed", 1024))
     coordinator = DistCoordinator()
-    # a bug with DistCoordinator
     coordinator._local_rank = int(coordinator._local_rank)
     device = get_current_device()
 
     # == init exp_dir ==
-    if cfg.get("overfit", None) is not None:
+    if cfg.get("overfit", None) is not None: # None
         cfg.tag = f"{cfg.tag}_" if cfg.get("tag", "") != "" else ""
         cfg.tag += "overfit-" + str(cfg.get("overfit", None))
     exp_name, exp_dir = define_experiment_workspace(cfg, use_date=True)
@@ -156,8 +143,8 @@ def main():
     # ======================================================
     logger.info("Building dataset...")
     # == build dataset ==
-    dataset = build_module(cfg.dataset, DATASETS)
-    if cfg.get("overfit", None) is not None:
+    dataset = build_module(cfg.dataset, DATASETS) #todo builder函数，怎么对应到具体的代码的
+    if cfg.get("overfit", None) is not None: # None
         _overfit_idxs = random.sample(range(len(dataset)), cfg.overfit)
         logger.info(f"Overfit on: {_overfit_idxs}")
         overfit_idxs = []
@@ -166,7 +153,7 @@ def main():
             random.shuffle(_overfit_idxs)
         cfg.epochs = 1
         dataset = torch.utils.data.Subset(dataset, overfit_idxs)
-    logger.info("Dataset contains %s samples.", len(dataset))
+    logger.info("Dataset contains %s samples.", len(dataset)) # 742400 samples
 
     # == build dataloader ==
     dataloader_args = dict(
@@ -174,18 +161,18 @@ def main():
         batch_size=cfg.get("batch_size", None),
         num_workers=cfg.get("num_workers", 4),
         seed=cfg.get("seed", 1024),
-        shuffle=True if cfg.get("overfit", None) is None else False,
+        shuffle=True if cfg.get("overfit", None) is None else False, # 如果设置了 overfit，通常表示要对特定数据（例如调试或过拟合小样本测试）进行固定采样，此时不需要随机洗牌
         drop_last=True,
-        pin_memory=True,
+        pin_memory=True, # 在数据加载时将数据复制到固定内存中，有助于 GPU 数据传输时提高效率
         process_group=get_data_parallel_group(),
-        prefetch_factor=cfg.get("prefetch_factor", None),
+        prefetch_factor=cfg.get("prefetch_factor", None), # 设置预取系数，用来控制提前准备数据批次的量，优化数据加载性能
     )
     dataloader, sampler = prepare_dataloader(
-        bucket_config=cfg.get("bucket_config", None),
-        num_bucket_build_workers=cfg.get("num_bucket_build_workers", 1),
+        bucket_config=cfg.get("bucket_config", None), # todo bucket是啥
+        num_bucket_build_workers=cfg.get("num_bucket_build_workers", 1), # 16
         **dataloader_args,
     )
-    num_steps_per_epoch = len(dataloader) #4 * 7032=28128
+    num_steps_per_epoch = len(dataloader) #4 * 7032=28128 # 266928
 
     # val
     if cfg.get("overfit", None) is not None:
@@ -218,7 +205,7 @@ def main():
                 val_dataset, cfg.val.validation_index)
         else:
             raise NotImplementedError()
-    logger.info("Val Dataset contains %s samples.", len(val_dataset))
+    logger.info("Val Dataset contains %s samples.", len(val_dataset)) # 10 ???
     dataloader_args['shuffle'] = False
     dataloader_args['dataset'] = val_dataset
     dataloader_args['batch_size'] = cfg.val.get("batch_size", 1)
@@ -245,7 +232,7 @@ def main():
     # https://github.com/huggingface/transformers/issues/5486
     # if the program gets stuck, try set it to false
     os.environ['TOKENIZERS_PARALLELISM'] = "true"
-    text_encoder = build_module(cfg.get("text_encoder", None), MODELS, device=device, dtype=dtype) #!!!!T5有报错，删除了一个参数
+    text_encoder = build_module(cfg.get("text_encoder", None), MODELS, device=device, dtype=dtype) 
     if text_encoder is not None:
         text_encoder_output_dim = text_encoder.output_dim
         text_encoder_model_max_length = text_encoder.model_max_length
@@ -466,34 +453,47 @@ def main():
             for step, batch in pbar:
                 if verbose_mode:
                     logger.info(f"Dataloader returns data! step={step}")
-                B, T, NC = batch["pixel_values"].shape[:3]
+                B, T, NC = batch["pixel_values"].shape[:3]          # NC == 6, T == 8
                 logging.debug(f"bs = {B}; t = {T}; shape = {batch['pixel_values'].shape}")
                 timer_list = []
                 with timers["move_data"] as move_data_t:
-                    x = batch.pop("pixel_values").to(device, dtype) # [4, 1, 6, 3, 224, 400]
-                    # reshape之后用view是错的，交换可以
-                    # 最好直接用rearrange
-                    x = rearrange(x, "B T NC C ... -> (B NC) C T ...")  # BxNC, C, T, H, W
-                    y = batch.pop("captions")[0]  # B, just take first frame
-                    maps = batch.pop("bev_map_with_aux").to(device, dtype)  # B, T, C=8, H, W，合并 gt_masks_bev 和 gt_aux_bev，用作 BEV 监督（Bird Eye View），含义：语义分割的 ground truth mask
+                    x = batch.pop("pixel_values").to(device, dtype) # [4, 1, 6, 3, 224, 400]                    
+                    # ---------------------------------------------------------------
+                    # 旧代码：把 NC 合并到 batch
+                    # x = rearrange(x, "B T NC C ... -> (B NC) C T ...")  # BxNC, C, T, H, W
+                    # ---------------------------------------------------------------
+
+                    # >>> NEW —— 将 6 个视角与 8 帧拼到同一序列维：CT = NC * T = 48
+                    # x  : [B, C, CT, H, W]，其中 CT = 48
+                    # 这样一条样本同时包含 6 目 × 8 帧的完整信息
+                    CT = T * NC
+                    x = rearrange(x, "B T NC C H W -> B C (NC T) H W")  # B, C, 48, H, W
+                    y = batch.pop("captions")[0]                       # [B]  文本不变
+
+                    maps = batch.pop("bev_map_with_aux").to(device, dtype)  # [B, T, C=8, H, W] map不变，合并 gt_masks_bev 和 gt_aux_bev，用作 BEV 监督（Bird Eye View），含义：语义分割的 ground truth mask
+                   
                     bbox = batch.pop("bboxes_3d_data")
                     # B len list (T, NC=1, len, 8, 3)
-                    bbox = [bbox_i.data for bbox_i in bbox]
+                    bbox = [bbox_i.data for bbox_i in bbox] # # list ➜ tensor
                     # B, T, NC, len, 8, 3
                     # TODO: `bbox` has redundancy on `NC` dim. They are direct
                     # copies and should be differentiate through mask.
                     bbox = collate_bboxes_to_maxlen(bbox, device, dtype, NC, T)
                     if bbox is not None:
                         bbox = add_box_latent(bbox, B, NC, T, model.module.sample_box_latent) # 对 bbox 添加 latent 表示
-
                         for k, v in bbox.items():
-                            bbox[k] = rearrange(v, "B T NC ... -> (B NC) T ...")  # BxNC, T, len, 3, 7
-                    # B, T, NC, 3, 7
+                            # v: [B, T, NC, len, 3, 7] → [B, CT, len, 3, 7]
+                            bbox[k] = rearrange(v, "B T NC ... -> B (T NC) ...")
+
                     cams = batch.pop("camera_param").to(device, dtype) # 拼接 camera_intrinsics（相机内参）和 camera2lidar（外参）,形状：[T, N_cam, 3, 7],含义：用于将图像坐标映射到 LiDAR 坐标
-                    cams = rearrange(cams, "B T NC ... -> (B NC) T 1 ...")  # BxNC, T, 1, 3, 7
-                    rel_pos = batch.pop("frame_emb").to(device, dtype)#frame_emb='next2top' 时，表示 frame 间的变换矩阵，可能是PE
-                    rel_pos = repeat(rel_pos, "B T ... -> (B NC) T 1 ...", NC=NC)  # BxNC, T, 1, 4, 4
-                    # meta_data: T, B
+                    # cams = rearrange(cams, "B T NC ... -> (B NC) T 1 ...")  # BxNC, T, 1, 3, 7
+                    cams = rearrange(cams, "B T NC ... -> B (T NC) 1 ...")  # [B, CT, 1, 3, 7]
+
+                    rel_pos = batch.pop("frame_emb").to(device, dtype) # frame_emb='next2top' 时，表示 frame 间的变换矩阵，可能是PE
+                    # rel_pos = repeat(rel_pos, "B T ... -> (B NC) T 1 ...", NC=NC)  # BxNC, T, 1, 4, 4
+                    rel_pos = repeat(rel_pos, "B T ... -> B T NC ...", NC=NC)   # [B, T, NC, 4, 4]
+                    rel_pos = rearrange(rel_pos, "B T NC ... -> B (T NC) 1 ...") # [B, 48, 1, 4, 4]
+
                 if record_time:
                     timer_list.append(move_data_t)
 
@@ -504,15 +504,11 @@ def main():
                         if cfg.get("load_video_features", False):
                             x = x.to(device, dtype)
                         else:
-                            # if USE_NPU:
-                            if False:
-                                x = vae.encode(x)  # [B, C, T, H/P, W/P]
-                            else:
-                                with RandomStateManager(verbose=verbose_mode): # 控制 PyTorch 随机数生成器的状态，确保 并行计算的确定性
-                                    # NOTE: due to randomness, they may not match!
-                                    x = sp_vae(x, vae.encode, # 分开用vae.encode
-                                               get_sequence_parallel_group()) # 获取 ColossalAI 注册的 "sequence" 并行进程组（ProcessGroup）
-                            # assert torch.allclose(x_old, x)
+                            with RandomStateManager(verbose=verbose_mode): # 控制 PyTorch 随机数生成器的状态，保持多进程/并行运算的一致性
+                                # NOTE: due to randomness, they may not match!
+                                x = sp_vae(x, vae.encode, # 分开用vae.encode
+                                            get_sequence_parallel_group()) # 获取 ColossalAI 注册的 "sequence" 并行进程组（ProcessGroup）,对 VAE 进行并行编码
+                        
                         # Prepare text inputs
                         if cfg.get("load_text_features", False):
                             model_args = {"y": y.to(device, dtype)}
@@ -543,13 +539,14 @@ def main():
                             if random.random() < drop_cond_ratio:  # we need drop
                                 drop_cond_mask[bs] = 0
                                 drop_frame_mask[bs, :] = 0
-                                model_args["mask"][bs] = 1  # need to keep all tokens if uncond
+                                model_args["mask"][bs] = 1  # 无条件生成时，需保留所有文本 token
                                 continue
                             # 2. otherwise, we randomly pick some frames to drop
                             # make sure we do not drop the first and the last frame
                             t_ids = random.sample(
                                 range(1, T - 1), int(drop_cond_ratio_t * (T - 2)))
                             drop_frame_mask[bs, t_ids] = 0
+                    drop_frame_mask_ct = repeat(drop_frame_mask, "B T -> B (T NC)", NC=NC)  # [B, 48]
 
                     # == video meta info ==
                     # for k, v in batch.items():
@@ -560,7 +557,7 @@ def main():
                     model_args["cams"] = cams
                     model_args["rel_pos"] = rel_pos
                     model_args["drop_cond_mask"] = drop_cond_mask
-                    model_args["drop_frame_mask"] = drop_frame_mask
+                    model_args["drop_frame_mask"] = drop_frame_mask_ct
                     model_args["fps"] = batch.pop('fps')
                     model_args["height"] = batch.pop("height")
                     model_args["width"] = batch.pop("width")
@@ -577,7 +574,8 @@ def main():
                     # x_mask & scheduler assumes B, C, T dims. we should keep
                     # them as it is. Scheduler further assumes C is the second
                     # (data) dim, T is the third (view) dim.
-                    x = rearrange(x, "(B NC) C T ... -> B (C NC) T ...", NC=NC)  # B, (C, NC), T, H, W
+                    # x = rearrange(x, "(B NC) C T ... -> B (C NC) T ...", NC=NC)  # B, (C, NC), T, H, W
+                    # 现在 x 已经是 [B, C_lat, 12, H', W']，无需再重排
                     mask = None
                     if cfg.get("mask_ratios", None) is not None:
                         mask = mask_generator.get_masks(x)
@@ -593,7 +591,7 @@ def main():
                 if record_time:
                     timer_list.append(loss_t)
                 # NOTE: backward needs all_reduce, we sychronize here!
-                coordinator.block_all()
+                coordinator.block_all() # 确保多进程训练中各个进程在进行梯度反传前已同步最新状态
 
                 if verbose_mode:
                     logger.info(f"Start model backward step! step={step}, loss={loss_dict['loss']}")
