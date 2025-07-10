@@ -84,7 +84,7 @@ def main():
     record_time = cfg.get("record_time", False)
 
     # data config
-    if cfg.num_frames is None:  # variable length dataset!
+    if cfg.num_frames is None:  # variable length dataset! # stage2
         num_data_cfgs = len(cfg.data_cfg_names)
         datasets = []
         val_datasets = []
@@ -95,7 +95,7 @@ def main():
             val_datasets.append((res, val_dataset))
         cfg.dataset = {"type": "NuScenesMultiResDataset", "cfg": datasets}
         cfg.val_dataset = {"type": "NuScenesMultiResDataset", "cfg": val_datasets}
-    else:  # single dataset!
+    else:  # single dataset! # stage1
         cfg.dataset, cfg.val_dataset = merge_dataset_cfg(
             cfg, cfg.data_cfg_name, cfg.get("dataset_cfg_overrides", []),
             cfg.num_frames)
@@ -181,7 +181,7 @@ def main():
         prefetch_factor=cfg.get("prefetch_factor", None), # 设置预取系数，用来控制提前准备数据批次的量，优化数据加载性能
     )
     dataloader, sampler = prepare_dataloader(
-        bucket_config=cfg.get("bucket_config", None),
+        bucket_config=cfg.get("bucket_config", None), # todo bucket是啥
         num_bucket_build_workers=cfg.get("num_bucket_build_workers", 1), # 16
         **dataloader_args,
     )

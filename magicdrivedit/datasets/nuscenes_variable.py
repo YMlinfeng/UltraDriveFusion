@@ -219,7 +219,7 @@ class NuScenesVariableDataset(NuScenesTDataset):
 
 
 @DATASETS.register_module()
-class NuScenesMultiResDataset(torch.utils.data.Dataset):
+class NuScenesMultiResDataset(torch.utils.data.Dataset): # 封装多个不同分辨率的 NuScenesVariableDataset（或其子类）作为子数据集
     def __init__(self, cfg) -> None:
         super().__init__()
         self.datasets = OrderedDict()

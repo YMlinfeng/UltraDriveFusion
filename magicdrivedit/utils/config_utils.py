@@ -146,10 +146,10 @@ def merge_dataset_cfg(cfg, data_cfg_name, data_cfg_overrides, num_frames=None):
         overrides.append(f'+model.video_length={num_frames}')
     data_cfg_overrides_rest = []
     for (k, v) in data_cfg_overrides:
-        if k.startswith("+"):
+        if k.startswith("+"): # 一类是以 + 开头的，这是 Hydra 的语法，直接加进 overrides 列表里
             overrides.append(f'{k}={v}')
         else:
-            data_cfg_overrides_rest.append((k, v))
+            data_cfg_overrides_rest.append((k, v)) # 另一类是普通的键值对，暂时留在 data_cfg_overrides_rest，稍后再手动设置进配置对象。这样做是因为 Hydra 的 compose 只能识别带 + 的项
     with initialize(version_base=None, config_path="../../configs"):
         dataset_cfg = compose(overrides=overrides)
     for (k, v) in data_cfg_overrides_rest:

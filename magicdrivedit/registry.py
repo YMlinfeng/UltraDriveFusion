@@ -1,3 +1,5 @@
+# 经典注册机制的代码
+
 from copy import deepcopy # 这个函数可以深拷贝一个对象，也就是说不仅复制对象本身，还复制它内部嵌套的所有对象，互不影响
 
 import torch.nn as nn

@@ -39,7 +39,7 @@ def prepare_dataloader(
     **kwargs,
 ):
     _kwargs = kwargs.copy()
-    if isinstance(dataset, NuScenesMultiResDataset):
+    if isinstance(dataset, NuScenesMultiResDataset): # stage2
         batch_sampler = NuScenesVariableBatchSampler(
             dataset,
             bucket_config,

@@ -1,5 +1,5 @@
 # Dataset settings
-num_frames = 1
+num_frames = 8
 bbox_mode = 'all-xyz'
 
 data_cfg_name = "Nuscenes_map_cache_box_t_with_n2t"
@@ -26,7 +26,7 @@ dtype = "bf16"
 sp_size = 1
 plugin = "zero2-seq" if sp_size > 1 else "zero2"
 grad_checkpoint = False
-batch_size = 4
+batch_size = 2
 drop_cond_ratio = 0.15
 
 # Acceleration settings
@@ -197,5 +197,5 @@ weight_decay = 1e-2
 warmup_steps = 3000
 
 # mzj modification
-validation_before_run = True
+validation_before_run = False
 verbose_mode = True

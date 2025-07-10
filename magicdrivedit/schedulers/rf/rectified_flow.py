@@ -1,8 +1,13 @@
+'''
+主要用于扩散模型（diffusion model）训练过程中的时间步采样与噪声添加
+
+'''
+
 from typing import List
 import logging
 
 import torch
-from torch.distributions import LogisticNormal
+from torch.distributions import LogisticNormal # 用于采样时间步的概率分布（类似正态分布）
 from einops import rearrange
 
 # some code are inspired by https://github.com/magic-research/piecewise-rectified-flow/blob/main/scripts/train_perflow.py
@@ -59,13 +64,13 @@ def timestep_transform(
     # NOTE: currently, we do not take fps into account
     # NOTE: temporal_reduction is hardcoded, this should be equal to the temporal reduction factor of the vae
     # TODO: hard-coded, may change later!
-    if model_kwargs["num_frames"][0] == 1:
+    if model_kwargs["num_frames"][0] == 1: #  # 纯图片路径，不做时序下采样
         num_frames = torch.ones_like(model_kwargs["num_frames"])
-    else:
+    else: 
         if cog_style:
             num_frames = model_kwargs["num_frames"] // 4 + model_kwargs["num_frames"] % 2
-        else:
-            num_frames = model_kwargs["num_frames"] // 17 * 5
+        else: # # Stable-Video-Diffusion/MoVQ-VAE 的时间下采样
+            num_frames = model_kwargs["num_frames"] // 17 * 5 # MovQ-VAE 把一个 17 帧滑窗 编成 5 latent 帧（论文 “Compressing Video Latents” 做法）。超过 17 帧就按块处理；不足 17 帧会被丢到下一块，所以向下取整。
     assert (num_frames >= 1).all(), "num_frames cannot be less than 1"
     ratio_time = (num_frames / base_num_frames).sqrt()
 
@@ -88,7 +93,8 @@ class RFlowScheduler:
         scale=1.0,
         use_timestep_transform=False,
         transform_scale=1.0,
-        cog_style_trans=False,
+        # cog_style_trans=False,
+        cog_style_trans=True,
     ):
         self.num_timesteps = num_timesteps
         self.num_sampling_steps = num_sampling_steps

@@ -14,32 +14,31 @@ from .utils import extract_result_dict
 
 @DATASETS.register_module()
 class Custom3DDataset(Dataset):
-    """Customized 3D dataset.
+    """自定义的 3D 数据集。
 
-    This is the base dataset of SUNRGB-D, ScanNet, nuScenes, and KITTI
-    dataset.
+    这是 SUNRGB-D、ScanNet、nuScenes 和 KITTI 数据集的基础数据集。
 
-    Args:
-        dataset_root (str): Path of dataset root.
-        ann_file (str): Path of annotation file.
-        pipeline (list[dict], optional): Pipeline used for data processing.
-            Defaults to None.
-        classes (tuple[str], optional): Classes used in the dataset.
-            Defaults to None.
-        modality (dict, optional): Modality to specify the sensor data used
-            as input. Defaults to None.
-        box_type_3d (str, optional): Type of 3D box of this dataset.
-            Based on the `box_type_3d`, the dataset will encapsulate the box
-            to its original format then converted them to `box_type_3d`.
-            Defaults to 'LiDAR'. Available options includes
+    参数:
+        dataset_root (str): 数据集根目录的路径。
+        ann_file (str): 标注文件的路径。
+        pipeline (list[dict], optional): 用于数据处理的流水线。
+            默认为 None。
+        classes (tuple[str], optional): 数据集中使用的类别。
+            默认为 None。
+        modality (dict, optional): 模态信息，用于指定作为输入使用的传感器数据。
+            默认为 None。
+        box_type_3d (str, optional): 此数据集使用的 3D 框类型。
+            根据 `box_type_3d`，数据集会将框封装为其原始格式，
+            然后再转换为 `box_type_3d`。
+            默认为 'LiDAR'。可用选项包括：
 
-            - 'LiDAR': Box in LiDAR coordinates.
-            - 'Depth': Box in depth coordinates, usually for indoor dataset.
-            - 'Camera': Box in camera coordinates.
-        filter_empty_gt (bool, optional): Whether to filter empty GT.
-            Defaults to True.
-        test_mode (bool, optional): Whether the dataset is in test mode.
-            Defaults to False.
+            - 'LiDAR'：以 LiDAR 坐标系表示的框。
+            - 'Depth'：以深度坐标系表示的框，通常用于室内数据集。
+            - 'Camera'：以相机坐标系表示的框。
+        filter_empty_gt (bool, optional): 是否过滤空的 GT（Ground Truth）。
+            默认为 True。
+        test_mode (bool, optional): 数据集是否处于测试模式。
+            默认为 False。
     """
 
     def __init__(

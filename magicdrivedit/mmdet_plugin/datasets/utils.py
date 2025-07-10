@@ -2,19 +2,19 @@ import mmcv
 
 
 def extract_result_dict(results, key):
-    """Extract and return the data corresponding to key in result dict.
+    """提取并返回结果字典中对应 key 的数据。
 
-    ``results`` is a dict output from `pipeline(input_dict)`, which is the
-        loaded data from ``Dataset`` class.
-    The data terms inside may be wrapped in list, tuple and DataContainer, so
-        this function essentially extracts data from these wrappers.
+    ``results`` 是从 `pipeline(input_dict)` 输出的字典，
+        它是从 ``Dataset`` 类中加载的数据。
+    其中的数据项可能被包装在 list、tuple 或 DataContainer 中，
+        因此此函数的主要作用是从这些封装中提取数据。
 
-    Args:
-        results (dict): Data loaded using pipeline.
-        key (str): Key of the desired data.
+    参数:
+        results (dict): 使用 pipeline 加载的数据。
+        key (str): 所需数据的键。
 
-    Returns:
-        np.ndarray | torch.Tensor | None: Data term.
+    返回:
+        np.ndarray | torch.Tensor | None: 数据项。
     """
     if key not in results.keys():
         return None

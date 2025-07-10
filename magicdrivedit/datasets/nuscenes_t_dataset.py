@@ -589,16 +589,16 @@ def collate_fn_single_clip( # 将多个帧的样本合并为一个训练样本
     return_raw_data = False,
 ):
     """
-    We need to handle:
-    1. make multi-view images (img) into tensor -> [N, 6, 3, H, W]
-    2. make masks (gt_masks_bev, gt_aux_bev) into tensor
-        -> [N, 25 = 8 map + 10 obj + 7 aux, 200, 200]
-    3. make caption (location, desctiption, timeofday) and tokenize, padding
+    我们需要处理以下内容：
+    1. 将多视角图像（img）转换为张量 -> [N, 6, 3, H, W]
+    2. 将掩码（gt_masks_bev, gt_aux_bev）转换为张量
+        -> [N, 25 = 8 个地图 + 10 个目标 + 7 个辅助, 200, 200]
+    3. 将描述信息（location, description, timeofday）进行分词和填充
         -> [N, pad_length]
-    4. extract camera parameters (camera_intrinsics, camera2lidar)
+    4. 提取相机参数（camera_intrinsics, camera2lidar）
         camera2lidar: A @ v_camera = v_lidar
         -> [N, 6, 3, 7]
-    We keep other meta data as original.
+    我们保留其他元数据为原始格式。
     """
     if return_raw_data:
         return examples
@@ -796,7 +796,7 @@ class NuScenesTDataset(NuScenesDataset):
         self.drop_ori_imgs = drop_ori_imgs
 
     @property
-    def num_frames(self):
+    def num_frames(self): # video_length
         return self.video_length
 
     def balance_annotations(self, data_infos, scene_tokens): # 用于对训练数据按关键词进行采样均衡（防止某些场景如 daytime、night 不均衡）
@@ -846,17 +846,16 @@ class NuScenesTDataset(NuScenesDataset):
 
         return data_infos, balanced_data
 
-    def build_clips(self, data_infos, scene_tokens):
-        """Since the order in self.data_infos may change on loading, we
-        calculate the index for clips after loading.
+    def build_clips(self, data_infos, scene_tokens): # 返回二维列表的 int: int 是在 self.data_infos 中的索引
+        """由于在加载时 self.data_infos 中的顺序可能会发生变化，
+        我们在加载之后为片段计算索引。
 
-        Args:
-            data_infos (list of dict): loaded data_infos
-            scene_tokens (2-dim list of str): 2-dim list for tokens to each
-            scene 
+        参数:
+            data_infos (list of dict): 加载后的 data_infos。
+            scene_tokens (二维列表的 str): 每个场景对应的 token 的二维列表。
 
-        Returns:
-            2-dim list of int: int is the index in self.data_infos
+        返回:
+            二维列表的 int: int 是在 self.data_infos 中的索引。
         """
         self.token_data_dict = {
             item['token']: idx for idx, item in enumerate(data_infos)}
@@ -899,7 +898,8 @@ class NuScenesTDataset(NuScenesDataset):
                      f"start_on_firstframe={self.start_on_firstframe}")
         return all_clips
 
-    def load_annotations(self, ann_file):
+    def load_annotations(self, ann_file): # 加载标注后，调用 build_clips 生成 clip_infos（每个 clip 是连续 frame 的 index 列表）
+
         """Load annotations from ann_file.
 
         Args:
@@ -930,14 +930,14 @@ class NuScenesTDataset(NuScenesDataset):
             frames.append(frame_info)
         return frames
 
-    def get_data_info(self, index):
+    def get_data_info(self, index): # 返回一个 clip 的所有帧信息（调用 load_clip）
         """We should sample from clip_infos
         """
         clip = self.clip_infos[index]
         frames = self.load_clip(clip)
         return frames
 
-    def get_ann_info(self, index):
+    def get_ann_info(self, index): # 在原有框基础上增加 token（用于唯一标识每个 box）
         anns_results, mask = super().get_ann_info(index)
         info = self.data_infos[index]
         if "gt_box_ids" not in info:
@@ -1075,6 +1075,10 @@ class NuScenesTDataset(NuScenesDataset):
 
     def prepare_train_data(self, index): #!
         """This is called by `__getitem__`
+        重写自 MMDetection3D 的 Dataset 接口
+        调用 get_data_info → load_frames → collate_fn_single_clip
+        完成多帧样本的处理，返回训练模型需要的字典
+        核心函数，是训练时 __getitem__ 的默认调用入口
         """
         frames = self.get_data_info(index)
         ret_dicts = self.load_frames(frames)
