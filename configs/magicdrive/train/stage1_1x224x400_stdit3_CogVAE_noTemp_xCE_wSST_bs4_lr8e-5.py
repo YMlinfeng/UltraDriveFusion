@@ -52,12 +52,12 @@ micro_frame_size = None
 vae_out_channels = 16
 
 model = dict(
-    type="MagicDriveSTDiT3-XL/2",
+    type="UltraDriveSTDiT3-XL/2",
     qk_norm=True,
     pred_sigma=False,  # CHANGED
     enable_flash_attn=True and global_flash_attn,
     enable_layernorm_kernel=True and global_layernorm,
-    enable_sequence_parallelism=sp_size > 1,
+    enable_sequence_parallelism=sp_size > 1, 
     freeze_y_embedder=False,  # CHANGED
     # magicdrive
     with_temp_block=False,  # CHANGED

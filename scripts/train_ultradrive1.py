@@ -129,7 +129,6 @@ def main():
         dtype=cfg_dtype,
         grad_clip=cfg.get("grad_clip", 0),
         sp_size=cfg.get("sp_size", 1),
-        # sp_size=2, # mzj
         reduce_bucket_size_in_m=cfg.get("reduce_bucket_size_in_m", 20),
         # NOTE: do not enable this, precision do not match.
         overlap_allgather=cfg.get("overlap_allgather", False),
@@ -143,7 +142,7 @@ def main():
     # ======================================================
     logger.info("Building dataset...")
     # == build dataset ==
-    dataset = build_module(cfg.dataset, DATASETS) #todo builder函数，怎么对应到具体的代码的
+    dataset = build_module(cfg.dataset, DATASETS) 
     if cfg.get("overfit", None) is not None: # None
         _overfit_idxs = random.sample(range(len(dataset)), cfg.overfit)
         logger.info(f"Overfit on: {_overfit_idxs}")
@@ -153,7 +152,7 @@ def main():
             random.shuffle(_overfit_idxs)
         cfg.epochs = 1
         dataset = torch.utils.data.Subset(dataset, overfit_idxs)
-    logger.info("Dataset contains %s samples.", len(dataset)) # 742400 samples
+    logger.info("Dataset contains %s samples.", len(dataset)) # 742400 samples 单第一阶段26730samples
 
     # == build dataloader ==
     dataloader_args = dict(
@@ -557,7 +556,8 @@ def main():
                     model_args["cams"] = cams
                     model_args["rel_pos"] = rel_pos
                     model_args["drop_cond_mask"] = drop_cond_mask
-                    model_args["drop_frame_mask"] = drop_frame_mask_ct
+                    # model_args["drop_frame_mask"] = drop_frame_mask_ct
+                    model_args["drop_frame_mask"] = drop_frame_mask
                     model_args["fps"] = batch.pop('fps')
                     model_args["height"] = batch.pop("height")
                     model_args["width"] = batch.pop("width")
