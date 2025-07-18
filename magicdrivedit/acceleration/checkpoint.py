@@ -15,7 +15,7 @@ def set_grad_checkpoint(model, use_fp32_attention=False, gc_step=1):
     model.apply(set_attr)
 
 
-def auto_grad_checkpoint(module, *args, **kwargs):
+def auto_grad_checkpoint(module, *args, **kwargs): #todo:https://poe.com/chat/p88t776s9vz74cug88
     if getattr(module, "grad_checkpointing", False):
         if not isinstance(module, Iterable):
             return checkpoint(module, *args, use_reentrant=False, **kwargs)

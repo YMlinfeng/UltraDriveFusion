@@ -65,7 +65,7 @@ class MultiViewSTDiT3Block(nn.Module):
         # multiview params
         is_control_block=False,
         use_st_cross_attn=False,
-        skip_cross_view=False,
+        skip_cross_view=True, # mzj modified
     ):
         super().__init__()
         self.temporal = temporal
@@ -199,10 +199,9 @@ class MultiViewSTDiT3Block(nn.Module):
         mv_order_map=None,
         t_order_map=None,
     ):
-
-        B, N, C = x.shape  # [6, 350, 1152]
-        assert (N == T * S) and (B % NC == 0)
-        b = B // NC
+        B, N, C = x.shape  # [B, 4200=T(12)*S(350), 1152]
+        assert (N == T * S)
+        b = B // NC  #todo o3注意：从这里往下就都得改了
 
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = repeat(
             self.scale_shift_table[None] + t.reshape(b, 6, -1),
@@ -543,12 +542,12 @@ class UltraDriveSTDiT3(PreTrainedModel):
                     qk_norm=config.qk_norm,
                     # multiview params
                     use_st_cross_attn=config.use_st_cross_attn,
-                    # skip_cross_view=True,  # just for debug
+                    skip_cross_view=True,  # just for debug
                 )
                 for i in range(self.depth)
             ]
         )
-        if config.with_temp_block:
+        if config.with_temp_block: #todo 为什么这里没有开启
             self.base_blocks_t = nn.ModuleList(
                 [
                     MultiViewSTDiT3Block(
@@ -566,7 +565,7 @@ class UltraDriveSTDiT3(PreTrainedModel):
                         temporal=True,
                         rope=self.rope.rotate_queries_or_keys,
                     )
-                    for i in range(self.depth)
+                    for i in range(self.depth) # 28
                 ]
             )
         else:
@@ -594,10 +593,10 @@ class UltraDriveSTDiT3(PreTrainedModel):
                     use_st_cross_attn=config.use_st_cross_attn,
                     skip_cross_view=config.control_skip_cross_view,
                 )
-                for i in range(self.control_depth)
+                for i in range(self.control_depth) # 13
             ]
         )
-        if config.control_skip_temporal:
+        if config.control_skip_temporal: #todo 这里为什么没有开启
             self.control_blocks_t = None
         else:
             self.control_blocks_t = nn.ModuleList(
@@ -642,7 +641,7 @@ class UltraDriveSTDiT3(PreTrainedModel):
                 param.requires_grad = False
             for param in self.fps_embedder.parameters():
                 param.requires_grad = False
-        if config.freeze_temporal_blocks:
+        if config.freeze_temporal_blocks: #todo 这里为什么没有开启
             for block in self.base_blocks_t:
                 # freeze all
                 for param in block.parameters():
@@ -659,10 +658,10 @@ class UltraDriveSTDiT3(PreTrainedModel):
                     #     param.requires_grad = True
 
         # from magicdrive to video
-        if config.only_train_temp_blocks:
+        if config.only_train_temp_blocks: #todo 这里为什么没有开启
             if not config.only_train_base_blocks:
                 logging.warning("`only_train_temp_blocks` is only usable with `only_train_base_blocks`.")
-        if config.only_train_base_blocks:
+        if config.only_train_base_blocks: #todo 这里为什么没有开启
             # first freeze all
             for param in self.parameters():
                 param.requires_grad = False
@@ -702,18 +701,18 @@ class UltraDriveSTDiT3(PreTrainedModel):
             assert not config.freeze_old_params
             return # ignore all others
 
-        if config.freeze_old_params:
+        if config.freeze_old_params: #! #todo 这里为什么没有开启
             for param in self.parameters():
                 param.requires_grad = False
 
         # from pretrain to magicdrive control
-        if config.zero_and_train_embedder is not None:
+        if config.zero_and_train_embedder is not None: #todo 这里为什么没有开启
             for emb in config.zero_and_train_embedder:
                 zero_module(getattr(self, emb).mlp[-1])
                 for param in getattr(self, emb).parameters():
                     param.requires_grad = True
 
-        if config.qk_norm_trainable:
+        if config.qk_norm_trainable: #todo 这里为什么没有开启
             for name, param in self.named_parameters():
                 if "q_norm" in name or "k_norm" in name:
                     logging.info(f"set {name} to trainable")
@@ -721,7 +720,7 @@ class UltraDriveSTDiT3(PreTrainedModel):
 
         # make sure all new parameters require grad
         # cross view attn
-        for block in self.base_blocks_s:
+        for block in self.base_blocks_s: #todo 这里为什么开启了
             if hasattr(block, "cross_view_attn"):
                 for param in block.norm3.parameters():
                     param.requires_grad = True
@@ -734,7 +733,7 @@ class UltraDriveSTDiT3(PreTrainedModel):
         # control blocks        
         for param in self.control_blocks_s.parameters():
             param.requires_grad = True
-        if self.control_blocks_t is not None:
+        if self.control_blocks_t is not None: #todo 这里为什么没有开启
             for param in self.control_blocks_t.parameters():
                 param.requires_grad = True
         
@@ -893,24 +892,81 @@ class UltraDriveSTDiT3(PreTrainedModel):
         return bbox_emb
 
 
-    def encode_cam(self, cam, embedder, drop_mask): #! 不再把 NC 打到 batch 维
-        # B, T, S = cam.shape[:3]
-        # NC = B // drop_mask.shape[0]
-        # mask = repeat(drop_mask, "b T -> (b NC T S)", NC=NC, S=S)
-        # cam = rearrange(cam, "B T S ... -> (B T S) ...")
-        # cam_emb, _ = embedder.embed_cam(cam, mask, T=T, S=S)  # changed here
-        # # cam_emb = rearrange(cam_emb, "(B T S) ... -> B T S ...", B=B, T=T, S=S)
-        # return cam_emb
+    # def encode_cam(self, cam, embedder, drop_mask, T): #! 不再把 NC 打到 batch 维
+    #     # B, T, S = cam.shape[:3]
+    #     # NC = B // drop_mask.shape[0]
+    #     # mask = repeat(drop_mask, "b T -> (b NC T S)", NC=NC, S=S)
+    #     # cam = rearrange(cam, "B T S ... -> (B T S) ...")
+    #     # cam_emb, _ = embedder.embed_cam(cam, mask, T=T, S=S)  # changed here
+    #     # # cam_emb = rearrange(cam_emb, "(B T S) ... -> B T S ...", B=B, T=T, S=S)
+    #     # return cam_emb
         
-        # cam       : [B, CT, S, ...]
-        # drop_mask : [B, CT]
-        B, CT, S = cam.shape[:3]
-        cam_flat  = rearrange(cam, "B CT S ... -> (B CT S) ...")   # 展平
-        mask_flat = repeat(drop_mask, "B CT -> (B CT S)", S=S)     # 同步展平
+    #     # cam       : [B, CT, S, ...]
+    #     # drop_mask : [B, CT]
+    #     # return    : [B, CT, S, D]
+        
+    #     B, CT, S = cam.shape[:3]
+    #     NC = CT // T
+    #     cam_flat  = rearrange(cam, "B CT S ... -> (B CT S) ...")   # 展平
+    #     mask_flat = repeat(drop_mask, "B CT -> (B CT S)", S=S)     # 同步展平
 
-        cam_emb, _ = embedder.embed_cam(cam_flat, mask_flat, T=CT, S=S)
-        cam_emb    = rearrange(cam_emb, "(B CT S) ... -> B CT S ...", B=B, CT=CT, S=S)
-        return cam_emb                                               # [B, CT, S, hidden]
+    #     # embedder 仍用 (B, NC, T, S, D) 的世界观
+    #     cam_emb, _ = embedder.embed_cam(cam_flat, mask_flat, T=T, S=S) # torch.Size([6, 1152])
+    #     # cam_emb    = rearrange(cam_emb, "(B CT S) ... -> B CT S ...", B=B, CT=CT, S=S)
+    #     cam_emb = rearrange(cam_emb, "B NC T S D -> B (NC T) S D",
+    #                 NC=NC, T=T, S=S)
+    #     return cam_emb                                               # [B, CT, S, hidden]
+
+
+
+    def encode_cam(self, cam, embedder, drop_mask, T):
+        """
+        cam       : [B, CT, S, ...]                         CT = NC  or NC*T
+        drop_mask : [B, CT]
+        T         : 真·帧数 (camera token=1 , frame token=8)
+        return    : [B, CT, S, D]
+        """
+        B, CT, S = cam.shape[:3]
+        NC = CT // T                     # 推回相机数
+
+        # ------- 判断是不是 “FrameEmbedder” ---------
+        is_frame = hasattr(embedder, 'expects_time') or \
+                'camembeddertemp' in embedder.__class__.__name__.lower()
+
+        if is_frame:
+            # cam 先拆回  (B NC T S ...)
+            cam = rearrange(cam, 'B (NC T) S ... -> B NC T S ...',
+                            NC=NC, T=T, S=S)
+            # 再展平成 (B NC T S ...)
+            cam_flat  = rearrange(cam, 'B NC T S ... -> (B NC T S) ...') # [48, 4, 4]
+            mask_flat = repeat(drop_mask, 'B (NC T) -> (B NC T S)', #[48]
+                            NC=NC, T=T, S=S)
+        else:
+            # camera-embedder 继续老逻辑
+            cam_flat  = rearrange(cam,  'B CT S ... -> (B CT S) ...') #16137-637
+            mask_flat = repeat(drop_mask, 'B CT -> (B CT S)', S=S) # 6
+
+        # ---------- 调 embedder ----------
+        cam_emb, _ = embedder.embed_cam(cam_flat, mask_flat, T=T, S=S) # [6, 1, 1, 1152]
+
+        # ---------- 还原形状 ---------------
+        if cam_emb.ndim == 2:                  # camera-embedder [6, 1152]
+            cam_emb = rearrange(cam_emb,
+                                '(B CT S) D -> B CT S D',
+                                B=B, CT=CT, S=S)
+        else:                                  # frame-embedder
+            cam_emb = rearrange(cam_emb,
+                          '(B NC) Tret S D -> B NC Tret S D',
+                          B=B, NC=NC, S=S)
+            T_ret = cam_emb.shape[2]                 # 可能是 1，也可能是 8
+            if T_ret == 1 and T > 1:
+                cam_emb = cam_emb.repeat_interleave(T, dim=2)   # [B,NC,T,S,D] #todo 要check这个方法和rearrange的区别
+
+            cam_emb = rearrange(cam_emb,
+                            'B NC Tret S D -> B (NC Tret) S D')
+        
+        assert cam_emb.shape[1] == CT
+        return cam_emb                         # [B, CT, S, D]
 
     def encode_cond_sequence( #! 彻底去掉 (B·NC) 展开
             self, 
@@ -938,43 +994,36 @@ class UltraDriveSTDiT3(PreTrainedModel):
         # y, _ = self.encode_text(y, mask, drop_cond_mask)  # b, seq_len, dim = 2,38,1152
         y, _ = self.encode_text(y, mask, drop_cond_mask)           # [B, L_txt, D]
         y = repeat(y, "B L D -> B CT L D", CT=CT)                  # 按 CT 帧复制
-        cond.append(y) # todo 原始文件中这里是注释掉的，奇怪
+        cond.append(y) 
 
         # ---------- 3D Box ----------
         if bbox is not None:
-            # drop_box_mask = repeat(drop_cond_mask, "B -> B CT", CT=CT) & \
-            #                 repeat(drop_frame_mask, "B T -> B (T NC)", NC=NC)
-            drop_cond_mask = repeat(drop_cond_mask, "B -> B CT", CT=CT)
-            drop_frame_mask = repeat(drop_frame_mask, "B T -> B (T NC)", NC=NC)
-            drop_box_mask = torch.logical_and(drop_cond_mask, drop_frame_mask) # 先转换成bool再按位与，太妙了
+            drop_box_mask = torch.logical_and(
+                repeat(drop_cond_mask, "B -> B CT", CT=CT), 
+                repeat(drop_frame_mask, "B T -> B (T NC)", NC=NC)
+            ) # 先转换成bool再按位与，太妙了
             bbox_emb = self.encode_box(bbox, drop_mask=drop_box_mask)   # [B, CT, L_box, D]
             bbox_emb = self.base_token[None, None, None] + bbox_emb
+            # bbox_emb = repeat(bbox_emb, 'B T -> B (T NC)', NC=NC) # 已经是48，无需重复
+
             cond.append(bbox_emb)
 
-        # # encode cam, just take from first frame
-        # cam_emb = self.encode_cam(
-        #     # cams, self.camera_embedder, repeat(drop_cond_mask, "b -> b T", T=T))
-        #     cams[:, 0:1], self.camera_embedder, repeat(drop_cond_mask, "b -> b T", T=1))
-        # frame_emb = self.encode_cam(rel_pos, self.frame_embedder, drop_frame_mask)
-        # cam_emb = rearrange(cam_emb, "(B 1 S) ... -> B 1 S ...", S=cams.shape[2])
-        # # frame_emb = frame_emb.mean(1)  # pooled token
-        # # zero proj on base token
-        # cam_emb = self.base_token[None, None, None] + cam_emb
-        # frame_emb = self.base_token[None, None, None] + frame_emb # 编码摄像头参数和 frame_emb（相对位置）分别通过 encode_cam 得到摄像头和帧嵌入，并加上 base_token
-
-        # cam_emb = repeat(cam_emb, 'B 1 S ... -> B T S ...', T=frame_emb.shape[1])
-        # y = repeat(y, "B ... -> B T ...", T=frame_emb.shape[1])
-        # cond = [frame_emb, cam_emb, y] + cond
-
         # ---------- Camera & Frame ----------
-        cam_emb = self.encode_cam(cams[:, :1], self.camera_embedder,     # 仅第一帧
-                                  repeat(drop_cond_mask, "B -> B 1"))    # [B, 1, S, D]
-        frame_emb = self.encode_cam(rel_pos, self.frame_embedder,
-                                    repeat(drop_frame_mask, "B T -> B (T NC)", NC=NC))
-        cam_emb   = self.base_token[None, None, None] + cam_emb
-        frame_emb = self.base_token[None, None, None] + frame_emb
+        # 此时：drop_cond_mask.shape=【B=1】，drop_frame_mask.shape=【B=1, T=8】
+        # ------------ camera token -------------
+        cams_static = cams[:, :NC]                          # [B, 6, 1, 3,7]
+        mask_cam    = repeat(drop_cond_mask, 'B -> B NC', NC=NC)
+        cam_emb = self.encode_cam(cams_static,  self.camera_embedder,
+                                mask_cam, T=1)            # T=1
+        cam_emb = self.base_token[None,None,None] + cam_emb
+        cam_emb = repeat(cam_emb, 'B NC S D -> B (NC T) S D', T=T_orig) #[B, CT, S, D]
 
-        cam_emb   = repeat(cam_emb, 'B 1 S ... -> B CT S ...', CT=CT)    # time-align
+        # ------------ frame token --------------
+        mask_frame = repeat(drop_frame_mask, 'B T -> B (T NC)', NC=NC)
+        frame_emb  = self.encode_cam(rel_pos,  self.frame_embedder, # rel_pos [B, 48, S=1, 4, 4]
+                                    mask_frame, T=T_orig)  # T=8
+        frame_emb  = self.base_token[None,None,None] + frame_emb # torch.Size([1, 48, 1, 1152])
+
         cond.extend([frame_emb, cam_emb])
 
         # merge to one
@@ -988,9 +1037,8 @@ class UltraDriveSTDiT3(PreTrainedModel):
         # return cond, 
 
         # ---------- 合并 ----------
-        cond = torch.cat(cond, dim=2)    # [B, CT, L_all, hidden]
-        return cond, None
-
+        cond = torch.cat(cond, dim=2)    # [B, CT, L_all, hidden] #todo cams和frame都是1，y是33，是不是不对？要check原代码
+        return cond, None # todo 对比和原来代码的张量形状，四个cond一个一个对比
 
     def encode_map(self, maps, NC, h_pad_size, x_shape): #! 貌似是可以兼容的
         """
@@ -1003,10 +1051,6 @@ class UltraDriveSTDiT3(PreTrainedModel):
             h_pad_size : 为 sequence-parallel 可能追加的高度补边 (patch 单位)
             x_shape    : 用于和视觉 latent 对齐的目标三维尺寸
         """
-        if NC != 1:
-            raise ValueError(
-                "在“六目合并压缩”模式下，encode_map 不再支持 NC>1；"
-                "多视角信息已在时间维展开。")
 
         # b, T = maps.shape[:2]
         B, T_orig = maps.shape[:2]
@@ -1126,11 +1170,24 @@ class UltraDriveSTDiT3(PreTrainedModel):
             drop_cond_mask = torch.ones((B), device=x.device, dtype=x.dtype)
         if drop_frame_mask is None:  # box & rel_pos
             drop_frame_mask = torch.ones((B, real_T), device=x.device, dtype=x.dtype)
-        if False:
-        # if mv_order_map is None:
-            NC = 1
-        else:
-            NC = len(mv_order_map)
+        # if False:
+        # # if mv_order_map is None:
+        #     NC = 1
+        # else:
+        #     NC = len(mv_order_map)
+        NC = 1
+        mv_order_map = {}
+        '''
+        mv_order_map = {
+            0: [1, 5],   # 让 0 号相机和 1、5 号做交叉注意力
+            1: [0, 2],
+            2: [1, 3],
+            3: [2, 4],
+            4: [3, 5],
+            5: [4, 0],
+        }
+                
+        '''
 
         x = x.to(dtype)
         # HACK: to use scheduler, we never assume NC with C
@@ -1293,7 +1350,7 @@ class UltraDriveSTDiT3(PreTrainedModel):
                 c, y, t_mlp, y_lens, x_mask, t0_mlp, T, S, NC, mv_order_map, t_order_map)
             x = x + c_skip  # connection
             if self.base_blocks_t is not None:
-                x = auto_grad_checkpoint(
+                x = auto_grad_checkpoint( #! 出错点：这里开始用MVSTDiT了 
                     self.base_blocks_t[block_i],
                     x, y, t_mlp, y_lens, x_mask, t0_mlp, T, S, NC, mv_order_map, t_order_map)
             if self.control_blocks_t is not None:

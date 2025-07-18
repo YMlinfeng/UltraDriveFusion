@@ -479,8 +479,8 @@ class ContinuousBBoxWithTextTempEmbedding(ContinuousBBoxWithTextEmbedding):
 
         x = rearrange(x, '(b n) t d -> b t n d', b=B, n=N)
         if self.final_proj:
-            x = self.final_proj(x)
-        x = self.downsampler(x)
+            x = self.final_proj(x) #[1, 48, 17, 1152]
+        # x = self.downsampler(x)
         return x
 
 
@@ -548,6 +548,7 @@ class CamEmbedder(nn.Module):
 
     def embed_cam(self, param, mask=None, **kwargs):
         """
+        cam从这里走
         Args:
             camera (torch.Tensor): [N, 3, num] or [N, 4, num]
         """
@@ -642,6 +643,7 @@ class CamEmbedderTemp(CamEmbedder):
 
     def embed_cam(self, param, mask=None, T=None, S=None):
         """
+        frame从这里走
         Args:
             camera (torch.Tensor): [N, 3, num] or [N, 4, num]
         """
@@ -671,7 +673,7 @@ class CamEmbedderTemp(CamEmbedder):
         x = rearrange(x, '(b S) T d -> b T S d', S=S, T=T)
         if self.final_proj:
             x = self.final_proj(x)
-        x = self.downsampler(x)
+        # x = self.downsampler(x) # from [6, 8, S=1, D=1152]
         return x, emb
 
 
