@@ -1,5 +1,6 @@
 import os
 import logging
+import tqdm
 
 DEVICE_TYPE = os.environ.get("DEVICE_TYPE", "gpu")
 
