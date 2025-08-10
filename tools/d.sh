@@ -1,4 +1,5 @@
 #!/bin/bash
+# 自动化下载脚本
 
 # 设置目标目录
 TARGET_DIR="/mnt/bn/occupancy3d/workspace/mzj/data/nuscenes_mmdet3d-12Hz"
