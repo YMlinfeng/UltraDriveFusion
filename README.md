@@ -1,7 +1,4 @@
 ## 1 Introduction
-
-...
-
 ultra <br> 
 ultra
 
