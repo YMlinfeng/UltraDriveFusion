@@ -1,6 +1,5 @@
 ## 1 Introduction
 ultra <br> 
-ultra
 
 ## 2 Related Works
 
