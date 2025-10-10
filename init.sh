@@ -1,6 +1,4 @@
 #!/bin/bash
-# /mnt/bn/occupancy3d/workspace/mzj/data
-# /mnt/bn/occupancy3d/workspace/mzj/env/magic
 
 # set -e  # 遇到错误立即退出
 cd /mnt/bn/occupancy3d/workspace/mzj/MagicDriveDiT/ || exit 1
