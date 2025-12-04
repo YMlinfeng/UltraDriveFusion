@@ -1,5 +1,5 @@
 # 进入你的源码目录
-cd /mnt/bn/occupancy3d/workspace/mzj/src/ColossalAI
+cd /pathtoColossalAI
 
 # 卸载之前可能错误安装的版本
 pip uninstall colossalai -y
