@@ -4,7 +4,7 @@ defaults:
 
 task_id: "0.0.0"
 log_root_prefix: outputs/
-projname: MagicDriveDiT
+projname: UltraDrive
 hydra:
   run:
     dir: ${log_root_prefix}/${projname}_${now:%Y-%m-%d}_${now:%H-%M}_${task_id}
