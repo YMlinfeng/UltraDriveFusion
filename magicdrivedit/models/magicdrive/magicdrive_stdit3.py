@@ -333,7 +333,6 @@ class MultiViewSTDiT3Block(nn.Module):
             x_m_zero = t2i_modulate(self.norm2(x), shift_mlp_zero, scale_mlp_zero)
             x_m = self.t_mask_select(x_mask, x_m, x_m_zero, T, S)
 
-        # MLP
         x_m = self.mlp(x_m)
 
         # modulate (MLP)
