@@ -234,7 +234,7 @@ def clean_caption(caption):
     caption = BeautifulSoup(caption, features="html.parser").text
 
     # @<nickname>
-    caption = re.sub(r"@[\w\d]+\b", "", caption)
+    caption = re.sub(r"@[\w\d]+\b", "", caption) #github
 
     # 31C0—31EF CJK Strokes
     # 31F0—31FF Katakana Phonetic Extensions
