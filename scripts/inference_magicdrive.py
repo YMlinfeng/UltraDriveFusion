@@ -78,9 +78,9 @@ def set_omegaconf_key_value(cfg, key, value):
     
 def main():
     torch.set_grad_enabled(False) #?
-    # ======================================================
+    # =====================================================
     # configs & runtime variables
-    # ======================================================
+    # =====================================================
     # == parse configs ==
     cfg = parse_configs(training=False)
     if cfg.get("vsdebug", False):
