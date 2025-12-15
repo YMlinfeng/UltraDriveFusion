@@ -77,7 +77,7 @@ def set_omegaconf_key_value(cfg, key, value):
 
     
 def main():
-    torch.set_grad_enabled(False) #?
+    torch.set_grad_enabled(False) #
     # =====================================================
     # configs & runtime variables
     # =====================================================
