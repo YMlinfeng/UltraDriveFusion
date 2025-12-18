@@ -8,5 +8,5 @@ dpkg -i cuda-repo-ubuntu2004-11-8-local_11.8.0-520.61.05-1_amd64.deb
 
 cp /var/cuda-repo-ubuntu2004-11-8-local/cuda-*-keyring.gpg /usr/share/keyrings/
 
-apt update
-apt install -y cuda-toolkit-11-8
+sudo apt update
+sudo apt install -y cuda-toolkit-11-8
