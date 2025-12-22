@@ -1,4 +1,4 @@
-# 设置 NVIDIA 软件源
+# 设置 NVIDIA 软件源 cmd
 apt update && apt install -y wget gnupg software-properties-common
 
 # 下载并安装 CUDA 11.8 本地 repo
