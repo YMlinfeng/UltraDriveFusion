@@ -26,4 +26,5 @@ dataset:
       ann_file: ${...dataset_process_root}nuscenes_interp_12Hz_infos_val.pkl
       img_collate_param: ${img_collate_param}
 model:
+  # length
   video_length: 1
