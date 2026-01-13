@@ -4,14 +4,12 @@ from contextlib import contextmanager, nullcontext
 from functools import partial
 from typing import Dict, Iterator, List, Optional, Tuple
 from weakref import proxy
-
-import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch import Tensor, inf
 from torch.distributed import ProcessGroup
 from torch.optim import Optimizer
-
+import torch 
 from colossalai.accelerator import get_accelerator
 from colossalai.amp.naive_amp.mixed_precision_mixin import (
     BF16MixedPrecisionMixin,
