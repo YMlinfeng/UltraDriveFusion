@@ -1,5 +1,5 @@
 ## 1 Introduction
-Ultra Ominidrive(UniconDrive)<br> 
+Ultra Omnidrive(UniconDrive)<br> 
 
 ## 2 Related Works
 
