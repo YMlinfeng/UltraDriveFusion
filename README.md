@@ -1,5 +1,5 @@
 ## 1 Introduction
-Omnidrive(UniconDrive)<br>  
+Omnidrive
 
 ## 2 Related Works
 
